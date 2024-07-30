@@ -1,0 +1,55 @@
+# .NET Core
+bin/
+obj/
+*.user
+*.vspscc
+*.vssscc
+.vscode/
+.vscode-test/
+.DS_Store
+*.suo
+*.log
+*.pdb
+*.cache
+*.ide
+*.sln.docstates
+
+# User-specific files
+*.rsuser
+*.rsuser.json
+*.sln.isf
+
+# Backup & output folder
+_backup/
+_output/
+
+# CodeRush output folder
+.cr/
+.vscode-test/
+
+# Uncomment if you have tasks
+# .vs/
+.vs/
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# VS Code directory
+.vscode/
+.vscode-test/
+
+# Rider directories
+.idea/
+
+# JetBrains Rider
+.idea/
+
+# VS for Mac
+.vscode/
