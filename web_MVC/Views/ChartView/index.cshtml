@@ -1,0 +1,342 @@
+﻿@{
+    ViewData["Title"] = "Chart live Data";
+   
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="~/css/site.css" />
+</head>
+<body>
+    <h2>Power Data Chart</h2>
+    <div class="chartDiv">
+        <canvas id="powerDataChart"></canvas>
+        <canvas id="powerShowChart"></canvas>
+    </div>
+    
+
+    <h2>Energy Data Chart</h2>
+    <div class="chartDiv">
+        <canvas id="energyDataChart"></canvas>
+        <canvas id="energyShowChart"></canvas>
+    </div>
+
+    @section Scripts {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+        <script>
+            $(document).ready(function () {
+                const powerChartContext = document.getElementById('powerDataChart').getContext('2d');
+                const energyChartContext = document.getElementById('energyDataChart').getContext('2d');
+                const powerShowContext = document.getElementById('powerShowChart').getContext('2d');
+                const energyShowContext = document.getElementById('energyShowChart').getContext('2d');
+
+                let powerChart = new Chart(powerChartContext, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                title: {
+                                    display: true,
+                                    text: 'Minutes'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                let energyChart = new Chart(energyChartContext, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                },
+                                grid: {
+                                    display: true,
+                                    drawBorder: false,
+                                    color: function (context) {
+                                        return context.tick && context.tick.label ? '#e0e0e0' : 'transparent';
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                stacked: true,
+                                grid: {
+                                    display: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false,
+                            }
+                        }, 
+                        
+                    }
+                });
+
+                let powerShow = new Chart(powerShowContext, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    font: {
+                                        size: 10 // 設置 Y 軸文字大小
+                                    }
+                                } ,
+                            },
+                   
+                        },
+                        plugins: {
+                            legend: {
+                                display: false,
+                            }
+                        }
+                    }
+                });
+
+                let energyShow = new Chart(energyShowContext, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        scales: {
+                            x: {stacked:false},
+                            y: {
+                                stacked:false,
+                                title: {
+                                    display: true,
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 10 // 設置 Y 軸文字大小
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false,
+                            }
+                        }
+                    }
+                });
+
+                const powerDataStore = {};
+                const energyDataStore = {};
+                const powerShowStore = {};
+                const energyShowStore = {};
+                let currentMin = 419;
+
+                function updateChart(chart, dataStore, data) {
+                    const labels = new Set(chart.data.labels);
+
+                    data.forEach(item => {
+                        const baseName = item.name.split('_')[0];
+                        const date = new Date(item.datetime);
+                        const minutes = date.getHours() * 60 + date.getMinutes();
+
+                        labels.add(minutes);
+
+                        if (!dataStore[baseName]) {
+                            dataStore[baseName] = {
+                                label: baseName,
+                                data: [],
+                                borderColor: getRandomColor(),
+                                borderWidth: 1,
+                                fill: false
+                            };
+                            chart.data.datasets.push(dataStore[baseName]);
+                        }
+
+                        if (!powerShowStore[baseName]) {
+                            powerShowStore[baseName] = {
+                                data: [],
+                                backgroundColor: '#0066CC'
+                            };
+                            powerShow.data.datasets.push(powerShowStore[baseName]);
+                        }
+
+                        dataStore[baseName].data.push({
+                            x: minutes,
+                            y: item.value
+                        });
+
+                        console.log(item.value + "????????"+baseName);
+                        powerShowStore[baseName].data.push({
+                            x: item.value,
+                            y: baseName
+                        });  
+                        
+                       
+
+
+                    });
+                    // 排序每個 baseName 的資料
+                   // powerShow.data.datasets = powerShow.data.datasets.sort((a, b) => b.data.x - a.data.x);
+                    // 排序每個 baseName 的資料並更新 powerShow 的資料集
+                    powerShow.data.datasets.forEach(set => {
+                        if (set.label in powerShowStore) {
+                            set.data = powerShowStore[set.label].data.sort((a, b) => b.x - a.x);
+                        }
+                    });
+
+                    // 根據最大值排序所有 dataset
+                    powerShow.data.datasets.sort((a, b) => {
+                        if (a.data.length === 0 || b.data.length === 0) return 0;
+                        return b.data[0].x - a.data[0].x;
+                    });
+                    powerShow.update();
+              
+                    
+
+                    // 清空 powerShow 的資料以便下次更新
+                    powerShow.data.datasets.forEach(set => {
+                        set.data = [];
+                    });
+
+                    chart.data.labels = Array.from(labels).sort((a, b) => a - b);
+                    chart.update();
+                }
+
+
+                function updateEnergyChart(chart, dataStore, data) {
+                    const interval = 15;
+                    const intervalColors = {};
+                    const passMin = currentMin - 420;
+                    data.forEach(item => {
+                        const baseName = item.name.split('_')[0];
+                        const date = new Date(item.datetime);
+                        const intervalKey = Math.floor(passMin / interval) * interval;
+                        clearData = false;
+                        if (!dataStore[baseName]) {
+                            dataStore[baseName] = {
+                                data: [],
+                                backgroundColor: [],
+                                period:[],
+                            };
+                            chart.data.datasets.push(dataStore[baseName]);
+                        }
+
+                        if (!intervalColors[intervalKey]) {
+                            intervalColors[intervalKey] = getRandomColor();
+                        }
+
+                        if (!dataStore[baseName].totalCount) {
+                            dataStore[baseName].intervals = {};
+                            dataStore[baseName].totalCount = 0;
+                        }
+
+                        if (!dataStore[baseName].intervals[intervalKey]) {
+                            dataStore[baseName].intervals[intervalKey] = 0;
+                        }  
+                        if (!energyShowStore[baseName]) {
+                                energyShowStore[baseName] = {
+                                    data: [],
+                                    backgroundColor: '#0066CC'
+                                };
+                                energyShow.data.datasets.push(energyShowStore[baseName]);
+                            }
+
+                        if (passMin % interval === 0 && passMin!=0 ) {
+                            console.log("???????????????????????" + currentMin);
+                            dataStore[baseName].totalCount += item.value;
+                        //  push energy data
+                            dataStore[baseName].data.push({                                      
+                                x: baseName,
+                                y: dataStore[baseName].totalCount,
+                            });
+                            dataStore[baseName].backgroundColor.push(intervalColors[intervalKey]);
+                            dataStore[baseName].period.push(currentMin);
+                          
+                        // push energyShow data
+                            energyShowStore[baseName].data = [];
+                            energyShowStore[baseName].data.push({
+                                x: item.value,
+                                y: baseName
+                            });
+                            
+                           
+                            
+
+                            if (intervalKey != 0) {
+                                chart.data.datasets.forEach(dataset => {
+                                    dataset.data.sort((a, b) => b.y - a.y);
+                                });
+                             
+                            }
+                        }
+                    });
+             
+                   energyShow.update();
+                   
+                     
+                    chart.update();
+                }
+
+                function getRandomColor() {
+                    const letters = '0123456789ABCDEF';
+                    let color = '#';
+                    for (let i = 0; i < 6; i++) {
+                        color += letters[Math.floor(Math.random() * 16)];
+                    }
+                    return color;
+                }
+
+                async function fetchPowerData() {
+                    const response = await fetch(`/ChartView/getPowerData?currentMin=${currentMin}`);
+                    const data = await response.json();
+                    updateChart(powerChart, powerDataStore, data);
+                }
+
+                async function fetchEnergyData() {
+                    const response = await fetch(`/ChartView/getEnergyData?currentMin=${currentMin}`);
+                    const data = await response.json();
+                    updateEnergyChart(energyChart, energyDataStore, data);
+                }
+
+                function refreshData() {
+                    currentMin += 1;
+                    fetchPowerData();
+                    fetchEnergyData();
+                }
+
+                setInterval(refreshData, 1500);
+                refreshData();
+            });
+        </script>
+    }
+</body>
+</html>

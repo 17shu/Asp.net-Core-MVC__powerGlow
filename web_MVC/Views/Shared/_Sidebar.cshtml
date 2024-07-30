@@ -1,0 +1,77 @@
+
+<div  style="width: 250px;">
+   
+   
+    <hr>
+    <ul>
+        <li>
+            <a href="#" aria-current="page">
+                Home
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                PowerGlow Live Chart
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                AI Consult
+            </a>
+        </li>
+ 
+    </ul>
+    <hr>
+    
+    </div>
+</div>
+
+<script>
+    const sidebarClicked=false;
+    function sideBarClicked() {
+        var sideBar = document.getElementsByClassName("sidebar")[0];
+        var page = document.getElementsByClassName("pageContainer")[0];
+        console.log('clicked');
+        if (sideBar) {
+            if (!sidebarClicked) {
+                sideBar.classList.toggle('hidden');
+                page.classList.toggle('hidden');
+                console.log("hidden!!!!!");
+                sidebarClicked = true;
+            }
+            else {
+                sideBar.classList.toggle('show');
+                sidebarClicked = false;
+            }
+            
+        }
+        else {
+            console.log("?????????!!!!!");
+        }
+    }
+
+</script>
+
+<style lang="scss">
+   
+
+
+    .sidebar {
+        width: 250px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        
+    }
+
+     .sidebar.hidden {
+        transform: translateX(-100%);
+    
+
+     }
+
+     .sidebar.show {
+         transform: translateX(0);
+     }
+   
+
+</style>

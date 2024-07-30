@@ -1,0 +1,140 @@
+html {
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  min-height: 100%;
+  /*display:inline-flex;*/
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.optionDiv{
+    margin: 10px;
+}
+.chartOptions{
+   display:flex;
+
+}
+.title {
+    display:inline-flex;
+    background-color: #0057A0;
+    color: aliceblue;
+    margin: 0px;
+    position: absolute;
+    width: -webkit-fill-available;
+    padding-left:25px;
+    align-items:center;
+    justify-content:center;
+}
+
+.formStyle {
+    position: absolute;
+    display: inline-flex;
+    top: 100px;
+}
+
+table {
+    border-style: ridge !important;
+    border-color: cadetblue !important;
+    border-width: 2px !important;
+    overflow-y: scroll;
+    display: block;
+}
+
+
+
+td {
+    border-color: cadetblue;
+    border-width: 1px !important;
+}
+
+.tableStyle{
+    position: absolute;
+    top:700px;
+    margin:10px;
+    font-size: 18px;
+    display:inline-flex;
+}
+
+.powerTable {
+    margin: 5px;
+    height: 250px;
+    width: 485px;
+}
+.energyTable {
+    margin: 5px;
+    height: 250px;
+    width: 500px;
+}
+.chartStyle{
+    position:absolute;
+    top:250px;
+    margin:10px;
+    height:450px;
+    width:80%;
+}
+
+
+
+tbody {
+    height: 250px;
+   
+}
+
+.chartDiv{
+    display:inline-flex;
+}
+
+#powerDataChart,
+#energyDataChart{
+    width:70% !important;
+    height:400px !important;
+    margin-right:20px;
+}
+
+
+#powerShowChart,
+#energyShowChart {
+    width: 35% !important;
+    height: 400px !important;
+    margin-right:10px;
+}
+
+.bi-list::before{
+    margin-right:15px;
+    font-size:28px;
+}
+   
+
+.page {
+    min-height: 100%;
+}
+
+body {
+    display: inline-flex;
+    height: 100vh;
+}
+
+
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+}
+
+.sidebarIcon {
+    position: inherit;
+    left: 10px;
+}
