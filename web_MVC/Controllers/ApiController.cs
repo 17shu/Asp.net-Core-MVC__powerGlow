@@ -56,7 +56,7 @@ namespace web_MVC.Controllers
                     SELECT DISTINCT Name, Value AS value, 
                     DATE_FORMAT(Datetime, '%Y-%m-%d %H:%i:00') AS Datetime
                     FROM di_schemas.powerdata_dmpower 
-                    WHERE DATE(Datetime) = '2024-05-03' AND HOUR(Datetime) * 60 + MINUTE(Datetime) = @MinuteOfDay
+                    WHERE DATE(Datetime) = '2024-05-23' AND HOUR(Datetime) * 60 + MINUTE(Datetime) = @MinuteOfDay
                     GROUP BY Name, DATE_FORMAT(Datetime, '%Y-%m-%d %H:%i:00')
                     ORDER BY Datetime;", con);
                     query.Parameters.AddWithValue("@MinuteOfDay", minuteOfDay);
@@ -131,7 +131,7 @@ namespace web_MVC.Controllers
                     DATE(t1.Datetime) = DATE(t2.Datetime) AND 
                     t2.Datetime = DATE_SUB(t1.Datetime, INTERVAL 15 MINUTE)
                 WHERE 
-                    DATE(t1.Datetime) = '2024-05-03' AND 
+                    DATE(t1.Datetime) = '2024-05-23' AND 
                     HOUR(t1.Datetime) * 60 + MINUTE(t1.Datetime) = @MinuteOfDay
                 GROUP BY 
                     t1.Name, 

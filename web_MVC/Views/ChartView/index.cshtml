@@ -1,7 +1,4 @@
-﻿
-
-<!DOCTYPE html>
-
+﻿<!DOCTYPE html>
 <html>
 <head>
     <link rel="stylesheet" type="text/css" href="~/css/site.css" />
@@ -9,15 +6,27 @@
 <body>
     <h2>Power Data Chart</h2>
     <div class="chartDiv">
-        <canvas id="powerDataChart"></canvas>
-        <canvas id="powerShowChart"></canvas>
+        <div>
+            <canvas id="powerDataChart"></canvas>
+        </div>
+        <div>
+            <canvas id="powerShowChart"></canvas>
+        </div>
+        
+    </div>
+    <div style="display:inline-flex">
+        <h2>Energy Data Chart</h2>
+        <b>count per 15 mins</b>
     </div>
     
-
-    <h2>Energy Data Chart</h2>
     <div class="chartDiv">
-        <canvas id="energyDataChart"></canvas>
-        <canvas id="energyShowChart"></canvas>
+        <div>
+            <canvas id="energyDataChart"></canvas>
+        </div>
+        <div>
+            <canvas id="energyShowChart"></canvas>
+        </div>
+        
     </div>
 
     @section Scripts {
@@ -31,6 +40,20 @@
                 const energyChartContext = document.getElementById('energyDataChart').getContext('2d');
                 const powerShowContext = document.getElementById('powerShowChart').getContext('2d');
                 const energyShowContext = document.getElementById('energyShowChart').getContext('2d');
+                const powerDataChartCanvas = document.getElementById('powerDataChart');
+                const powerShowChartCanvas = document.getElementById('powerShowChart');
+                const energyDataChartCanvas = document.getElementById('energyDataChart');
+                const energyShowChartCanvas = document.getElementById('energyShowChart');
+
+                powerDataChartCanvas.height = 550;
+                powerDataChartCanvas.width = 1000;
+                powerShowChartCanvas.height = 500;
+                powerShowChartCanvas.width = 600;
+                energyDataChartCanvas.height = 500;
+                energyDataChartCanvas.width = 1000;
+                energyShowChartCanvas.height = 500;
+                energyShowChartCanvas.width = 600;
+
 
                 let powerChart = new Chart(powerChartContext, {
                     type: 'line',
@@ -87,66 +110,65 @@
                             legend: {
                                 display: false,
                             }
-                        }, 
-                        
+                        },
                     }
                 });
 
-                let powerShow = new Chart(powerShowContext, {
+               
+                
+                var powerShow = new Chart(powerShowContext, {
                     type: 'bar',
                     data: {
                         labels: [],
-                        datasets: []
+                        datasets: [{
+                            label: 'Power Data',
+                            data: [],
+                            backgroundColor: '#145A32'
+                        }]
                     },
                     options: {
-                        indexAxis: 'y',
+                        indexAxis: 'y', // 設置為水平條形圖
+                        responsive: true,
                         scales: {
                             x: {
-                                beginAtZero: true,
+                                beginAtZero: true
                             },
                             y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    font: {
-                                        size: 10 // 設置 Y 軸文字大小
-                                    }
-                                } ,
-                            },
-                   
+                                beginAtZero: true
+                            }
                         },
                         plugins: {
                             legend: {
-                                display: false,
+                                display: false
                             }
                         }
                     }
                 });
 
-                let energyShow = new Chart(energyShowContext, {
-                    type: 'bar',
+
+                var energyShow = new Chart(energyShowContext, {
+                    type: 'bar', // 使用柱狀圖類型
                     data: {
                         labels: [],
-                        datasets: []
+                        datasets: [{
+                            label: 'Energy Data',
+                            data: [],
+                        }]
                     },
                     options: {
-                        indexAxis: 'y',
+                        indexAxis: 'y', // 設置為水平條形圖
+                        responsive: true,
                         scales: {
-                            x: {stacked:false},
+                            x: {
+                                beginAtZero: true
+                            },
                             y: {
-                                stacked:false,
-                                title: {
-                                    display: true,
-                                },
-                                ticks: {
-                                    font: {
-                                        size: 10 // 設置 Y 軸文字大小
-                                    }
-                                }
+                                beginAtZero: true
                             }
                         },
                         plugins: {
                             legend: {
-                                display: false,
+                                display: false
                             }
                         }
                     }
@@ -154,12 +176,13 @@
 
                 const powerDataStore = {};
                 const energyDataStore = {};
-                const powerShowStore = {};
+                let powerShowStore = {}; // 現在只初始化一次
                 const energyShowStore = {};
                 let currentMin = 419;
 
                 function updateChart(chart, dataStore, data) {
                     const labels = new Set(chart.data.labels);
+                    const newPowerShowStore = {}; // 每次更新重置
 
                     data.forEach(item => {
                         const baseName = item.name.split('_')[0];
@@ -179,12 +202,12 @@
                             chart.data.datasets.push(dataStore[baseName]);
                         }
 
-                        if (!powerShowStore[baseName]) {
-                            powerShowStore[baseName] = {
+                        if (!newPowerShowStore[baseName]) {
+                            newPowerShowStore[baseName] = {
+                                label: baseName,
                                 data: [],
                                 backgroundColor: '#0066CC'
                             };
-                            powerShow.data.datasets.push(powerShowStore[baseName]);
                         }
 
                         dataStore[baseName].data.push({
@@ -192,58 +215,47 @@
                             y: item.value
                         });
 
-                        console.log(item.value + "????????"+baseName);
-                        powerShowStore[baseName].data.push({
+                        newPowerShowStore[baseName].data.push({
                             x: item.value,
                             y: baseName
-                        });  
-                        
-                       
-
-
-                    });
-                    // 排序每個 baseName 的資料
-                   // powerShow.data.datasets = powerShow.data.datasets.sort((a, b) => b.data.x - a.data.x);
-                    // 排序每個 baseName 的資料並更新 powerShow 的資料集
-                    powerShow.data.datasets.forEach(set => {
-                        if (set.label in powerShowStore) {
-                            set.data = powerShowStore[set.label].data.sort((a, b) => b.x - a.x);
-                        }
+                        });
                     });
 
-                    // 根據最大值排序所有 dataset
+                    chart.data.labels = Array.from(labels).sort((a, b) => a - b);
+                    chart.update();
+
+                    // 更新 powerShow 的數據
+                    powerShow.data.datasets = Object.values(newPowerShowStore).map(dataset => ({
+                        label: dataset.label,
+                        data: dataset.data.sort((a, b) => b.x - a.x),
+                        backgroundColor: dataset.backgroundColor
+                    }));
+
                     powerShow.data.datasets.sort((a, b) => {
                         if (a.data.length === 0 || b.data.length === 0) return 0;
                         return b.data[0].x - a.data[0].x;
                     });
                     powerShow.update();
-              
-                    
 
-                    // 清空 powerShow 的資料以便下次更新
-                    powerShow.data.datasets.forEach(set => {
-                        set.data = [];
-                    });
-
-                    chart.data.labels = Array.from(labels).sort((a, b) => a - b);
-                    chart.update();
+                    // 更新全局 powerShowStore 以備下次更新
+                    powerShowStore = newPowerShowStore;
                 }
-
 
                 function updateEnergyChart(chart, dataStore, data) {
                     const interval = 15;
                     const intervalColors = {};
                     const passMin = currentMin - 420;
+
                     data.forEach(item => {
                         const baseName = item.name.split('_')[0];
                         const date = new Date(item.datetime);
                         const intervalKey = Math.floor(passMin / interval) * interval;
-                        clearData = false;
+
                         if (!dataStore[baseName]) {
                             dataStore[baseName] = {
+                                label: baseName,
                                 data: [],
                                 backgroundColor: [],
-                                period:[],
                             };
                             chart.data.datasets.push(dataStore[baseName]);
                         }
@@ -259,49 +271,42 @@
 
                         if (!dataStore[baseName].intervals[intervalKey]) {
                             dataStore[baseName].intervals[intervalKey] = 0;
-                        }  
-                        if (!energyShowStore[baseName]) {
-                                energyShowStore[baseName] = {
-                                    data: [],
-                                    backgroundColor: '#0066CC'
-                                };
-                                energyShow.data.datasets.push(energyShowStore[baseName]);
-                            }
+                        }
 
-                        if (passMin % interval === 0 && passMin!=0 ) {
-                            console.log("???????????????????????" + currentMin);
+                        if (!energyShowStore[baseName]) {
+                            energyShowStore[baseName] = {
+                                label: baseName,
+                                data: [],
+                                backgroundColor: '#0066CC'
+                            };
+                            energyShow.data.datasets.push(energyShowStore[baseName]);
+                        }
+
+                        if (passMin % interval === 0 && passMin != 0) {
                             dataStore[baseName].totalCount += item.value;
-                        //  push energy data
-                            dataStore[baseName].data.push({                                      
+
+                            dataStore[baseName].data.push({
                                 x: baseName,
                                 y: dataStore[baseName].totalCount,
                             });
                             dataStore[baseName].backgroundColor.push(intervalColors[intervalKey]);
-                            dataStore[baseName].period.push(currentMin);
-                          
-                        // push energyShow data
+
                             energyShowStore[baseName].data = [];
                             energyShowStore[baseName].data.push({
                                 x: item.value,
                                 y: baseName
                             });
-                            
-                           
-                            
 
                             if (intervalKey != 0) {
                                 chart.data.datasets.forEach(dataset => {
                                     dataset.data.sort((a, b) => b.y - a.y);
                                 });
-                             
                             }
                         }
                     });
-             
-                   energyShow.update();
-                   
-                     
+
                     chart.update();
+                    energyShow.update();
                 }
 
                 function getRandomColor() {

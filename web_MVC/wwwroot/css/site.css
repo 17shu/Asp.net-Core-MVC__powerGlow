@@ -99,18 +99,10 @@ tbody {
 }
 
 #powerDataChart,
-#energyDataChart{
-    width:70% !important;
-    height:400px !important;
-    margin-right:20px;
-}
-
-
+#energyDataChart,
 #powerShowChart,
-#energyShowChart {
-    width: 35% !important;
-    height: 400px !important;
-    margin-right:10px;
+#energyShowChart{
+    margin:50px;
 }
 
 .bi-list::before{
