@@ -27,12 +27,13 @@
 </div>
 
 <script>
-    const sidebarClicked=false;
+    let sidebarClicked=false;
     function sideBarClicked() {
         var sideBar = document.getElementsByClassName("sidebar")[0];
         var page = document.getElementsByClassName("pageContainer")[0];
         console.log('clicked');
         if (sideBar && page) {
+            console.log('inside');
             if (!sidebarClicked) {
                 sideBar.classList.add('hidden');
                 sideBar.classList.remove('show');
@@ -41,6 +42,7 @@
             } else {
                 sideBar.classList.add('show');
                 sideBar.classList.remove('hidden');
+                page.classList.remove('hidden');
                 sidebarClicked = false;
             }
         } else {
