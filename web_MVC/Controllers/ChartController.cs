@@ -17,6 +17,7 @@ namespace web_MVC.Controllers
                 StartDate = DateTime.Today.ToString("yyyy-MM-dd"),
                 EndDate = DateTime.Today.ToString("yyyy-MM-dd")
             };
+            ViewData["ShowSidebar"] = true;
             return View(model);
         }
 

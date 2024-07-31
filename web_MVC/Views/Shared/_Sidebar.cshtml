@@ -32,21 +32,19 @@
         var sideBar = document.getElementsByClassName("sidebar")[0];
         var page = document.getElementsByClassName("pageContainer")[0];
         console.log('clicked');
-        if (sideBar) {
+        if (sideBar && page) {
             if (!sidebarClicked) {
-                sideBar.classList.toggle('hidden');
-                page.classList.toggle('hidden');
-                console.log("hidden!!!!!");
+                sideBar.classList.add('hidden');
+                sideBar.classList.remove('show');
+                page.classList.add('hidden');
                 sidebarClicked = true;
-            }
-            else {
-                sideBar.classList.toggle('show');
+            } else {
+                sideBar.classList.add('show');
+                sideBar.classList.remove('hidden');
                 sidebarClicked = false;
             }
-            
-        }
-        else {
-            console.log("?????????!!!!!");
+        } else {
+            console.log("Sidebar or pageContainer not found");
         }
     }
 

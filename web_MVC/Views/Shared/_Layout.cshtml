@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="sidebar">
-        @await Html.PartialAsync("_Sidebar")
+        @if (ViewData["ShowSidebar"] == null || (bool)ViewData["ShowSidebar"])
+        {
+            @await Html.PartialAsync("_Sidebar")
+        }
      
     </div>
     <div class="pageContainer">
