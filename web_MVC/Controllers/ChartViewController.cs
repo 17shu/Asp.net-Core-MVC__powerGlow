@@ -13,8 +13,7 @@ namespace web_MVC.Controllers
 { 
     public class ChartViewController : Controller
     {
-        private readonly string connectionString = "server=127.0.0.1;database=di_schemas;user id=root;port=3306;password=123456;AllowLoadLocalInfile=true;";
-        private static Timer _timer;
+        
         private static List<ChartDataModel> _cachedPowerData = new List<ChartDataModel>();
         private static List<ChartDataModel> _cachedEnergyData = new List<ChartDataModel>();
         private static int currentMinute = 0; // 初始化為當天的第一分鐘
