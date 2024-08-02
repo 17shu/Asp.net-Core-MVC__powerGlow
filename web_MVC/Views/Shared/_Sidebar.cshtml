@@ -1,28 +1,31 @@
 
-<div  style="width: 250px;">
-   
-   
-    <hr>
-    <ul>
-        <li>
+<div  style="width: 250px;" class="sidebarStyle">
+ 
+        <div class="companyDiv">
+        <i class="bi bi-buildings"></i>
+        <h3><b>Company Name</b></h3>
+        </div>
+    
+
+    <div class="content">
+        <div class="btnDiv">
             <a href="#" aria-current="page">
                 Home
             </a>
-        </li>
-        <li>
-            <a href="#">
-                PowerGlow Live Chart
+        </div>
+        <div class="btnDiv">
+            <a href="@Url.Action("Index", "ChartView")">
+                Power Live Chart
             </a>
-        </li>
-        <li>
+        </div>
+        <div class="btnDiv">
             <a href="#">
                 AI Consult
             </a>
-        </li>
- 
-    </ul>
-    <hr>
-    
+        </div>
+    </div>
+      
+
 </div>
 
 <script>
@@ -53,13 +56,43 @@
 
 <style lang="scss">
    
+    .bi-buildings{
+        height: 110px;
+        width: 110px;
+        font-size: 56px;
+        border-style: groove;
+        border-width: 3px;
+        border-radius: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color:#EBF4FA;
+    }
 
+    
+    .companyDiv{
+        height:220px;
+        width:100%;
+        padding:10px;
+        display:inline-grid;
+        justify-items:center;
+        color:#EBF4FA;
+    }
+
+    .content{
+        display:grid;
+        gap:5px;
+    
+    }
 
     .sidebar {
+        box-sizing:content-box;
+        min-height:100vh ;
         width: 250px;
-        cursor: pointer;
         transition: transform 0.3s ease;
-        
+        border-width:0px 2px 0px 0px;
+        border-style:ridge;
+
     }
 
      .sidebar.hidden {
@@ -70,6 +103,24 @@
 
      .sidebar.show {
          transform: translateX(0);
+     }
+
+     .sidebarStyle{
+        background-color:#0057A0;
+        height:100%;
+     }
+
+     .btnDiv{
+
+           padding:8px;
+           font-size:22px;
+           border-style:inset;
+           border-width:1px 0px;
+           a{
+               color:#EBF4FA;
+               text-decoration:none;
+               font-family: monospace;
+           }
      }
    
 

@@ -13,13 +13,14 @@ html {
 }
 
 html {
-  min-height: 100%;
-  /*display:inline-flex;*/
+    min-height: 100%;
+    
 }
 
-body {
-  margin-bottom: 60px;
+div {
+    font-family: monospace;
 }
+
 
 .optionDiv{
     margin: 10px;
@@ -29,21 +30,25 @@ body {
 
 }
 .title {
-    display:inline-flex;
+    display: inline-flex;
     background-color: #0057A0;
-    color: aliceblue;
+    color: #EBF4FA;
+    height: 100px;
     margin: 0px;
-    position: absolute;
+    position: relative;
     width: -webkit-fill-available;
-    padding-left:25px;
-    align-items:center;
-    justify-content:center;
+    padding-left: 25px;
+    align-items: center;
+    justify-content: center;
+    font-family: monospace;
 }
 
 .formStyle {
-    position: absolute;
-    display: inline-flex;
-    top: 100px;
+    margin-top: 60px; 
+    display: flex;
+    justify-content:center;
+    font-size:20px;
+    gap:20px;
 }
 
 table {
@@ -62,11 +67,11 @@ td {
 }
 
 .tableStyle{
-    position: absolute;
-    top:700px;
-    margin:10px;
+    margin-top:60px;
     font-size: 18px;
-    display:inline-flex;
+    display:flex;
+    justify-content:center;
+    gap:80px;
 }
 
 .powerTable {
@@ -80,9 +85,9 @@ td {
     width: 100%;
 }
 .chartStyle{
-    position:absolute;
-    top:250px;
-    margin:10px;
+    margin-top:50px;
+    display:flex;
+    justify-content:center;
     height:450px;
     width:80%;
 }
@@ -105,18 +110,12 @@ tbody {
     margin:50px;
 }
 
-.bi-list::before{
-    margin-right:15px;
-    font-size:28px;
-}
-   
 
 .page {
     min-height: 100%;
 }
 
 body {
-    display: inline-flex;
     height: 100vh;
 }
 
@@ -127,6 +126,12 @@ body {
 }
 
 .sidebarIcon {
-    position: inherit;
+    position: absolute;
     left: 10px;
+    cursor: pointer;
 }
+.bi-list::before {
+    margin-right: 15px;
+    font-size: 54px;
+}
+   

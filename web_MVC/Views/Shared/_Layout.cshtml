@@ -9,18 +9,20 @@
 
 </head>
 <body>
-    <div class="sidebar">
-        @if (ViewData["ShowSidebar"] == null || (bool)ViewData["ShowSidebar"])
-        {
-            @await Html.PartialAsync("_Sidebar")
-        }
-     
-    </div>
-    <div class="pageContainer">
-        <main role="main" class="pb-3">
-            @RenderBody()
+    <div class="pageDiv">
+        <div class="sidebar">
+            @if (ViewData["ShowSidebar"] == null || (bool)ViewData["ShowSidebar"])
+            {
+                @await Html.PartialAsync("_Sidebar")
+            }
+
+        </div>
+        
+        <main role="main" class="pageContainer">
+             @RenderBody()
         </main>
     </div>
+   
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="~/lib/chart.js/dist/chart.umd.js"></script>
@@ -33,6 +35,12 @@
 </html>
 
 <style>
+    .pageDiv{
+        margin:0px;
+        padding:0px;
+        min-height:100vh;
+        display:flex;
+    }
     .pageContainer {
         width: 100vw !important;
         
