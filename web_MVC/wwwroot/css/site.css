@@ -72,12 +72,12 @@ td {
 .powerTable {
     margin: 5px;
     height: 250px;
-    width: 485px;
+    width: 100%;
 }
 .energyTable {
     margin: 5px;
     height: 250px;
-    width: 500px;
+    width: 100%;
 }
 .chartStyle{
     position:absolute;
