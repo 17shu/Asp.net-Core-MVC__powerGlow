@@ -1,11 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using MySql.EntityFrameworkCore;
 using MySql.Data.MySqlClient;
-using System;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.Extensions.Logging;
+
 using web_MVC.Models;
 
 namespace web_MVC.Controllers
@@ -162,6 +158,155 @@ namespace web_MVC.Controllers
 
             return energyData;
         }
+
+        [HttpGet("GetPowerHis")]
+        public IActionResult GetPowerHisData(DateTime dateS, DateTime dateE, string name)
+        {
+            Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
+            try
+            {
+                var powerData = FetchPowerHisData(dateS,dateE,name);
+                return Ok(powerData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while fetching power data: {ex.Message}", ex);
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+
+        }
+
+        private List<ChartDataModel> FetchPowerHisData(DateTime dateS, DateTime dateE, string name)
+        {
+            Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!");
+            var powerdata = new List<ChartDataModel>();
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            Console.WriteLine(connectionString);
+            try
+            {
+                using (var con = new MySqlConnection(connectionString))
+                {
+                    con.Open();
+                    var query = new MySqlCommand($@"
+                        SELECT DISTINCT
+                            t1.Name as Name,
+                            t1.Value AS max_value,
+                            t1.Datetime 
+                        FROM 
+                            di_schemas.powerdata_dmpower t1
+                        JOIN (
+                            SELECT DISTINCT
+                                DATE(Datetime) AS date,
+                                MAX(CAST(Value AS DOUBLE)) AS max_value
+                            FROM 
+                                di_schemas.powerdata_dmpower
+                            WHERE 
+                                Datetime BETWEEN @DateS AND @DateE
+                                AND Name = @Name
+                            GROUP BY 
+                                DATE(Datetime)
+                        ) t2 ON DATE(t1.Datetime) = t2.date 
+                           AND t1.Value = t2.max_value
+                        GROUP BY
+                            t2.date
+                        ORDER BY 
+                            t1.Datetime;", con);
+                    query.Parameters.AddWithValue("@DateS", dateS.ToString("yyyy-MM-dd") + " 00:00:00");
+                    query.Parameters.AddWithValue("@DateE", dateE.ToString("yyyy-MM-dd") + " 23:59:59");
+                    query.Parameters.AddWithValue("@Name", name + "_Demand_KW");
+
+                    using (var reader = query.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            powerdata.Add(new ChartDataModel
+                            {
+                                Name = reader["Name"].ToString(),
+                                Value = Convert.ToDouble(reader["max_value"]),
+                                Datetime = reader["Datetime"].ToString()
+                            });
+                        }
+                    }
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
+                throw;
+            }
+
+            return powerdata;
+
+        }
+
+        [HttpGet("GetEnergyHis")]
+        public IActionResult GetEnergyHisData(DateTime dateS, DateTime dateE, string name)
+        {
+            try
+            {
+                var energyData = FetchEnergyHisData(dateS,dateE,name);
+                return Ok(energyData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while fetching power data: {ex.Message}", ex);
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+
+        }
+
+        private List<ChartDataModel> FetchEnergyHisData(DateTime dateS, DateTime dateE, string name)
+        {
+            Console.WriteLine("fetch!!!!!!!!!!!!" + name);
+            var energyData = new List<ChartDataModel>();
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            Console.WriteLine(connectionString);
+            try
+            {
+                using (var con = new MySqlConnection(connectionString))
+                {
+                    con.Open();
+                    var query = new MySqlCommand($@"
+                SELECT 
+                    Name,
+                    DATE(Datetime) AS Datetime,
+                    MAX(Value) - MIN(Value) AS difference
+                FROM 
+                    di_schemas.powerdata_energy
+                WHERE
+                    Datetime BETWEEN @DateS AND @DateE AND Name = @Name
+                GROUP BY 
+                    DATE(Datetime);", con);
+                    query.Parameters.AddWithValue("@DateS", dateS.ToString("yyyy-MM-dd") + "00:00:00");
+                    query.Parameters.AddWithValue("@DateE", dateE.ToString("yyyy-MM-dd") + "3:59:00");
+                    query.Parameters.AddWithValue("@Name", name + "_KWH");
+
+                    using (var reader = query.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            energyData.Add(new ChartDataModel
+                            {
+                                Name = reader["Name"].ToString(),
+                                Value = Convert.ToDouble(reader["difference"]),
+                                Datetime = reader["Datetime"].ToString()
+                            });
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
+                throw;
+            }
+
+            return energyData;
+        }
+
 
     }
 }

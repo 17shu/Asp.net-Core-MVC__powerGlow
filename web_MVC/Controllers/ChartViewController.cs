@@ -7,7 +7,7 @@ using web_MVC.Models;
 using System.Windows;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Configuration;
+//using System.Configuration;
 
 namespace web_MVC.Controllers
 { 
@@ -57,7 +57,7 @@ namespace web_MVC.Controllers
                 return StatusCode(500, "Failed to fetch power data.");
             }
         }
-        [HttpGet("GetPowerData")]
+        [HttpGet]
      
         public async Task<IActionResult> FetchPowerData(int currentMin)
         {
