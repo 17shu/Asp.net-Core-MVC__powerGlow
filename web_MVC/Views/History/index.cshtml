@@ -1,4 +1,245 @@
-﻿<html>
-
+﻿@model web_MVC.Models.ChartViewModel;
+<!DOCTYPE html>
+<html>
+<head>
+    <title>History Page</title>
+</head>
+<body>
     <h1>This is History Page ..........</h1>
+        <p>Tool Options : </p>
+        <select class="form-select" aria-label="Default select example" id="toolOption">
+            <option selected>Tools Options</option>
+            @foreach (var name in Model.Names)
+            {
+                <option>@name</option>
+            }
+        </select>
+        <p>Date Time :</p>
+        <input type="date" class="form-control" id="date" name="date">
+
+       <button type="button" class="btn btn-dark" onclick="LoadData()">Go Search</button>
+
+
+    <div>
+        <div id="historyPowerChart"></div>
+        <div id="historyEnergyChart"></div>
+    </div>
+
+    @section Scripts {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+        <script>   
+            
+            function LoadData() {
+                $.ajax({
+                    url: '@Url.Action("GetHistory","History")',
+                    type: 'Get',
+                    data: {
+                        tool: toolOption.value,
+                        date: date.value
+                    },
+                    success: function (data) {
+                        console.log('Data received from server:', data);
+                        if (data && data.powerData && data.energyData) {
+                            renderChart(data);
+                        } else {
+                            console.error('Unexpected data format received:', data);
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error during AJAX request:', error);
+                    }
+                })
+
+                
+            }  
+
+         
+                var toolOption = document.getElementById('toolOption');
+                var date = document.getElementById('date');
+                var PowerHis = document.getElementById('historyPowerChart');
+                var EnergyHis = document.getElementById('historyEnergyChart');
+
+
+            async function renderChart(data) {
+                PowerHis.innerHTML = ''; // 清空已有的 canvas 元素
+                EnergyHis.innerHTML = '';
+                console.log("Rendering chart...");
+
+                var PowerLabels = [];  
+                var Powerdatasets = [];
+                var EnergyLabels = [];
+                var Energydatasets = [];
+                var powerData = data.powerData;
+                var energyData = data.energyData;
+                var minDate = null;
+                var minDate2 = null;
+                var maxDate = null;
+                var maxDate2 = null;
+                var color = getRandomColor();
+                // 處理 Power 數據
+                powerData.forEach(function (item) {
+                    if (!minDate || item.datetime < minDate) minDate = item.datetime;
+                    if (!maxDate || item.datetime > maxDate) maxDate = item.datetime;
+
+                    if (!PowerLabels.includes(item.datetime)) {
+                        PowerLabels.push(item.datetime);
+                    }
+
+                    var dataset = Powerdatasets.find(d => d.label === item.name);
+                    
+                    
+                    if (!dataset) {
+                        dataset = {
+                            label: item.name,
+                            data: [],
+                            borderColor: color,
+                            backgroundColor: color,
+                            fill: false,
+                            pointBackgroundColor: [],
+                            pointBorderColor: [],
+                            pointRadius: [],
+                        };
+                        Powerdatasets.push(dataset);
+                    }
+                    dataset.data.push({ x: item.datetime, y: item.value });
+                    dataset.pointBackgroundColor.push(hexToRgba(color, 0.1));
+                    dataset.pointBorderColor.push(color);
+                    dataset.pointRadius.push(3.5);
+                });
+
+
+
+                  var ctx = document.createElement('canvas');
+                 PowerHis.appendChild(ctx);
+
+                new Chart(ctx, {
+                    type: 'line', 
+                    data: {
+                        labels: PowerLabels,
+                        datasets: Powerdatasets
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                               
+                                min: minDate,
+                                max: maxDate,
+                                beginAtZero: true
+                            },
+                            y: {
+                                beginAtZero: true,
+                            },
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        var label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.raw.y;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 處理 Energy 數據
+                energyData.forEach(function (item) {
+                    var itemDate = new Date(item.datetime);
+                    if (!minDate2 || item.datetime < minDate2) minDate2 = item.datetime;
+                    if (!maxDate2 || item.datetime > maxDate2) maxDate2 = item.datetime;
+
+                    if (!EnergyLabels.includes(item.datetime)) {
+                        EnergyLabels.push(item.datetime); // 将字符串推入 EnergyLabels
+                    }
+
+                    var dataset = Energydatasets.find(d => d.label === item.name);
+                    if (!dataset) {
+                        dataset = {
+                            label: item.name,
+                            data: [],
+                            borderColor: color,
+                            backgroundColor: color,
+                            fill: false,
+                            pointBackgroundColor: [],
+                            pointBorderColor: [],
+                            pointRadius: []
+                        };
+                        Energydatasets.push(dataset);
+                    }
+                    
+                    dataset.data.push({ x: item.datetime, y: item.value });
+                    dataset.pointBackgroundColor.push(hexToRgba(color, 0.1));
+                    dataset.pointBorderColor.push(color);
+                    dataset.pointRadius.push(3.5);
+                });
+
+                var ctx2 = document.createElement('canvas');
+                EnergyHis.appendChild(ctx2);
+                new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: EnergyLabels,
+                        datasets: Energydatasets
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                min: minDate2,
+                                max: maxDate2,
+                                beginAtZero: true,
+                
+                            },
+                            y: {
+                                beginAtZero: true,
+                            },
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        var label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.raw.y;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+           
+            function getRandomColor() {
+                var letters = '0123456789ABCDEF';
+                var color = '#';
+                for (var i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+            //調整透明度 adjust the transparent
+            function hexToRgba(hex, alpha) {
+                hex = hex.replace('#', '');
+
+                var r = parseInt(hex.substring(0, 2), 16);
+                var g = parseInt(hex.substring(2, 4), 16);
+                var b = parseInt(hex.substring(4, 6), 16);
+
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
+
+        </script>
+    }
+</body>
 </html>

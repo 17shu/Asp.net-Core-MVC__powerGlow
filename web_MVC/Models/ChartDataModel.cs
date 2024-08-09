@@ -8,5 +8,6 @@ namespace web_MVC.Models
         public double Value { get; set; }
         public string Datetime { get; set; }
 
+        public double Diff {  get; set; }
     }
 }

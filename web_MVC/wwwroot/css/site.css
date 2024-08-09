@@ -36,7 +36,7 @@ div {
     height: 100px;
     margin: 0px;
     position: relative;
-    width: -webkit-fill-available;
+    width: 100vw;
     padding-left: 25px;
     align-items: center;
     justify-content: center;
