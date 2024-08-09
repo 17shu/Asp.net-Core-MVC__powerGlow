@@ -21,6 +21,9 @@
 
 
     <div>
+        <div id="loadDiv" style="display:none">
+            @await Html.PartialAsync("_Loading")
+        </div>
         <div id="historyPowerChart"></div>
         <div id="historyEnergyChart"></div>
     </div>
@@ -29,9 +32,21 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-        <script>   
+        <script>
             
+             function showLoading() {
+                 console.log('loading..................');
+                 $("#loadDiv").show();
+             }
+
+            function hideLoading() {
+                $("#loadDiv").hide();
+            }
+        
+
             function LoadData() {
+                showLoading();
+
                 $.ajax({
                     url: '@Url.Action("GetHistory","History")',
                     type: 'Get',
@@ -46,6 +61,9 @@
                         } else {
                             console.error('Unexpected data format received:', data);
                         }
+                    },
+                    complete: function () {
+                        hideLoading();
                     },
                     error: function (error) {
                         console.error('Error during AJAX request:', error);

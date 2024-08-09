@@ -17,4 +17,16 @@
     <PackageReference Include="Npm" Version="3.5.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Views\Shared\_Loading.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Views\Shared\_Loading.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Views\Shared\_Loading.cshtml" />
+  </ItemGroup>
+
 </Project>
