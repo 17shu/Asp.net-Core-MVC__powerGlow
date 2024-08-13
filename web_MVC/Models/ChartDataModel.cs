@@ -9,5 +9,7 @@ namespace web_MVC.Models
         public string Datetime { get; set; }
 
         public double Diff {  get; set; }
+
+        public string color { get; set; }
     }
 }

@@ -3,22 +3,51 @@
 <html>
 <head>
     <title>History Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" type="text/css">
 </head>
 <body>
-    <h1>This is History Page ..........</h1>
-        <p>Tool Options : </p>
-        <select class="form-select" aria-label="Default select example" id="toolOption">
-            <option selected>Tools Options</option>
-            @foreach (var name in Model.Names)
-            {
-                <option>@name</option>
-            }
-        </select>
-        <p>Date Time :</p>
-        <input type="date" class="form-control" id="date" name="date">
+    <div class="title">
+        <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
+        <h2>History Analyze</h2>
+    </div>
+    <div class="formStyle">
+        <div>
+            <p class="fontStyle">Tool Options : </p>
 
-       <button type="button" class="btn btn-dark" onclick="LoadData()">Go Search</button>
+            <div class="toolOption">
 
+                <div class="form-check" style="margin-left:8px;">
+                    <input class="form-check-input" type="checkbox" value="all" id="flexCheckChecked_all">
+                    <label class="form-check-label" for="flexCheckChecked">
+                        Select ALL
+                    </label>
+                </div>
+                @foreach (var name in Model.Names)
+                {
+                    <div class="form-check" style="margin-left:8px;">
+                        <input class="form-check-input single" type="checkbox" value="@name">
+                        <label class="form-check-label" for="flexCheckChecked">
+                            @("  " + name)
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div>
+            <p class="fontStyle">Date Time :</p>
+            <input type="date" class="form-control dateStyle" id="date" name="date" />
+        </div>
+       
+
+
+        
+        <button type="button" class="btn btn-dark searchBtn" onclick="LoadData()"><i class="bi bi-search"></i></button>
+    </div>
+  
+   
 
     <div>
         <div id="loadDiv" style="display:none">
@@ -33,31 +62,47 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
         <script>
-            
-             function showLoading() {
-                 console.log('loading..................');
-                 $("#loadDiv").show();
-             }
+            function showLoading() {
+                console.log('loading..................');
+                $("#loadDiv").show();
+            }
 
             function hideLoading() {
                 $("#loadDiv").hide();
             }
-        
 
             function LoadData() {
                 showLoading();
+                var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+                var toolOption = [];
+                if (checkboxes[0].value == 'all') toolOption = @Html.Raw(Json.Serialize(Model.Names));
+                else {
+                    checkboxes.forEach(function (checkbox) {
+                        toolOption.push(checkbox.value);
+                    });
+                }
+               
+                console.log(toolOption);
+                var selectedTools = toolOption.map(option => `'${option}_Demand_KW'`);
+                var tools = selectedTools.join(",");  // 將陣列元素用逗號分隔，連接成一個字符串
+                console.log(tools);
+                selectedTools = toolOption.map(option => `'${option}_KWH'`);
+                var tools_en = selectedTools.join(",");
+                
 
                 $.ajax({
-                    url: '@Url.Action("GetHistory","History")',
-                    type: 'Get',
+                    url: '@Url.Action("GetHistory", "History")',
+                    type: 'GET',
                     data: {
-                        tool: toolOption.value,
+                        powerTool: tools,
+                        enTool: tools_en,
                         date: date.value
                     },
                     success: function (data) {
                         console.log('Data received from server:', data);
                         if (data && data.powerData && data.energyData) {
-                            renderChart(data);
+                            renderChart(data.powerData, 'Power');
+                            renderChart(data.energyData, 'Energy');
                         } else {
                             console.error('Unexpected data format received:', data);
                         }
@@ -68,184 +113,115 @@
                     error: function (error) {
                         console.error('Error during AJAX request:', error);
                     }
-                })
+                });
+            }
+
+            function getRandomColor(use) {
+                var colors = [
+                    "#7AFEC6", "#FFE153", "#B7FF4A", "#C4C400", "#A5A552", "#FFD1A4",
+                    "#01814A", "#5B5B5B", "#EAC100", "#B8B8DC", "#5E005E", "#007500",
+                    "#AE57A4", "#8CEA00", "#FFFF6F", "#FFC1E0", "#C4C400", "#842B00",
+                    "#CF9E9E", "#5CADAD", "#252525"
+                ];
 
                 
-            }  
+                return colors[use];
+            }
 
-         
-                var toolOption = document.getElementById('toolOption');
-                var date = document.getElementById('date');
-                var PowerHis = document.getElementById('historyPowerChart');
-                var EnergyHis = document.getElementById('historyEnergyChart');
+            async function renderChart(data, chartType) {
+                var container = chartType === 'Power' ? PowerHis : EnergyHis;
+                container.innerHTML = ''; // 清空已有的 canvas 元素
 
-
-            async function renderChart(data) {
-                PowerHis.innerHTML = ''; // 清空已有的 canvas 元素
-                EnergyHis.innerHTML = '';
                 console.log("Rendering chart...");
+                var Labels = [];
+                var datasets = [];
+                var use = 0;
+                var minDate = data[0].datetime;
+                var maxDate = data[data.length - 1].datetime;
+                var color = getRandomColor(use);
+                var increaseColor = '#FF0000';
+                var decreaseColor = '#0066CC';
 
-                var PowerLabels = [];  
-                var Powerdatasets = [];
-                var EnergyLabels = [];
-                var Energydatasets = [];
-                var powerData = data.powerData;
-                var energyData = data.energyData;
-                var minDate = null;
-                var minDate2 = null;
-                var maxDate = null;
-                var maxDate2 = null;
-                var color = getRandomColor();
-                // 處理 Power 數據
-                powerData.forEach(function (item) {
-                    if (!minDate || item.datetime < minDate) minDate = item.datetime;
-                    if (!maxDate || item.datetime > maxDate) maxDate = item.datetime;
-
-                    if (!PowerLabels.includes(item.datetime)) {
-                        PowerLabels.push(item.datetime);
-                    }
-
-                    var dataset = Powerdatasets.find(d => d.label === item.name);
-                    
-                    
-                    if (!dataset) {
-                        dataset = {
-                            label: item.name,
-                            data: [],
-                            borderColor: color,
-                            backgroundColor: color,
-                            fill: false,
-                            pointBackgroundColor: [],
-                            pointBorderColor: [],
-                            pointRadius: [],
-                        };
-                        Powerdatasets.push(dataset);
-                    }
-                    dataset.data.push({ x: item.datetime, y: item.value });
-                    dataset.pointBackgroundColor.push(hexToRgba(color, 0.1));
-                    dataset.pointBorderColor.push(color);
-                    dataset.pointRadius.push(3.5);
-                });
-
-
-
-                  var ctx = document.createElement('canvas');
-                 PowerHis.appendChild(ctx);
-
-                new Chart(ctx, {
-                    type: 'line', 
-                    data: {
-                        labels: PowerLabels,
-                        datasets: Powerdatasets
-                    },
-                    options: {
-                        scales: {
-                            x: {
-                               
-                                min: minDate,
-                                max: maxDate,
-                                beginAtZero: true
-                            },
-                            y: {
-                                beginAtZero: true,
-                            },
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        var label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        label += context.raw.y;
-                                        return label;
-                                    }
-                                }
-                            }
+                    data.forEach(function (item) {
+                        console.log(item.name + " // " + item.datetime);
+                        var t = 0.1;
+                        if (!Labels.includes(item.datetime)) {
+                            Labels.push(item.datetime);
                         }
-                    }
-                });
 
-                // 處理 Energy 數據
-                energyData.forEach(function (item) {
-                    var itemDate = new Date(item.datetime);
-                    if (!minDate2 || item.datetime < minDate2) minDate2 = item.datetime;
-                    if (!maxDate2 || item.datetime > maxDate2) maxDate2 = item.datetime;
+                        var dataset = datasets.find(d => d.label === item.name);
+                        if (!dataset) {
+                            color = getRandomColor(use++);
+                            dataset = {
+                                label: item.name,
+                                data: [],
+                                borderColor: color,
+                                backgroundColor: color,
+                                fill: false,
+                                pointBackgroundColor: [],
+                                pointBorderColor: [],
+                                pointRadius: [],
+                            };
+                            datasets.push(dataset);
+                        }
+                        var linecolor;
+                        if (item.color != "") {
+                            linecolor = item.color;
+                            t = 1;
+                        }
+                        else{
+                            linecolor = dataset.borderColor;
+                            t = 0.1;
+                        }
+                        dataset.data.push({ x: item.datetime, y: item.value });
+                        dataset.pointBackgroundColor.push(hexToRgba(linecolor, t));
+                        dataset.pointBorderColor.push(linecolor);
+                        dataset.pointRadius.push(3.5);
+                    });
 
-                    if (!EnergyLabels.includes(item.datetime)) {
-                        EnergyLabels.push(item.datetime); // 将字符串推入 EnergyLabels
-                    }
-
-                    var dataset = Energydatasets.find(d => d.label === item.name);
-                    if (!dataset) {
-                        dataset = {
-                            label: item.name,
-                            data: [],
-                            borderColor: color,
-                            backgroundColor: color,
-                            fill: false,
-                            pointBackgroundColor: [],
-                            pointBorderColor: [],
-                            pointRadius: []
-                        };
-                        Energydatasets.push(dataset);
-                    }
-                    
-                    dataset.data.push({ x: item.datetime, y: item.value });
-                    dataset.pointBackgroundColor.push(hexToRgba(color, 0.1));
-                    dataset.pointBorderColor.push(color);
-                    dataset.pointRadius.push(3.5);
-                });
-
-                var ctx2 = document.createElement('canvas');
-                EnergyHis.appendChild(ctx2);
-                new Chart(ctx2, {
-                    type: 'line',
-                    data: {
-                        labels: EnergyLabels,
-                        datasets: Energydatasets
-                    },
-                    options: {
-                        scales: {
-                            x: {
-                                min: minDate2,
-                                max: maxDate2,
-                                beginAtZero: true,
                 
-                            },
-                            y: {
-                                beginAtZero: true,
-                            },
+
+                
+                
+                    var ctx = document.createElement('canvas');
+                    container.appendChild(ctx);
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: Labels,
+                            datasets: datasets
                         },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        var label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
+                        options: {
+                            scales: {
+                                x: {
+                                    min: minDate,
+                                    max: maxDate,
+                                    beginAtZero: true
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                },
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (context) {
+                                            var label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            label += context.raw.y;
+                                            return label;
                                         }
-                                        label += context.raw.y;
-                                        return label;
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
+                
             }
 
-           
-            function getRandomColor() {
-                var letters = '0123456789ABCDEF';
-                var color = '#';
-                for (var i = 0; i < 6; i++) {
-                    color += letters[Math.floor(Math.random() * 16)];
-                }
-                return color;
-            }
-            //調整透明度 adjust the transparent
             function hexToRgba(hex, alpha) {
                 hex = hex.replace('#', '');
 
@@ -256,7 +232,17 @@
                 return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
 
-
+            var all = document.getElementById('flexCheckChecked_all');
+            all.addEventListener("change", function () {
+                if (all.checked) {
+                    $('.single').attr("disabled", true); $('.single').attr("checked", false);
+                } else {
+                    $('.single').attr("disabled", false);
+                }
+            });
+            var date = document.getElementById('date');
+            var PowerHis = document.getElementById('historyPowerChart');
+            var EnergyHis = document.getElementById('historyEnergyChart');
         </script>
     }
 </body>

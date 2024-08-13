@@ -102,7 +102,7 @@ namespace web_MVC.Controllers
 
         private List<ChartDataModel> FetchEnergyData(int minuteOfDay)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!"+minuteOfDay);
+            Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!" + minuteOfDay);
             var energyData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
             Console.WriteLine(connectionString);
@@ -165,7 +165,7 @@ namespace web_MVC.Controllers
             Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
-                var powerData = FetchPowerHisData(dateS,dateE,name);
+                var powerData = FetchPowerHisData(dateS, dateE, name);
                 return Ok(powerData);
             }
             catch (Exception ex)
@@ -246,7 +246,7 @@ namespace web_MVC.Controllers
         {
             try
             {
-                var energyData = FetchEnergyHisData(dateS,dateE,name);
+                var energyData = FetchEnergyHisData(dateS, dateE, name);
                 return Ok(energyData);
             }
             catch (Exception ex)
@@ -308,7 +308,7 @@ namespace web_MVC.Controllers
         }
 
         [HttpGet("GetPowerHistory")]
-        public IActionResult GetPowerHistoryData(DateTime date ,string name)
+        public IActionResult GetPowerHistoryData(DateTime date, string name)
         {
             try
             {
@@ -323,57 +323,68 @@ namespace web_MVC.Controllers
 
         }
 
-        private List<ChartDataModel> FetchPowerHistoryData(DateTime date, string name)
+        private List<ChartDataModel> FetchPowerHistoryData(DateTime date, string names)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!????????" + name);
+            Console.WriteLine("fetch!!!!!!!!!!!!????????" + string.Join(",", names));
             var powerData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            Console.WriteLine(">>>>>>>>"+date+"<<<<<<<<<<<<<"+name);
+            Console.WriteLine(">>>>>>>>" + date + "<<<<<<<<<<<" + string.Join(",", names));
+
             try
             {
                 using (var con = new MySqlConnection(connectionString))
                 {
                     con.Open();
+
+                    // 構建 Name 列表的佔位符
+
                     var query = new MySqlCommand($@"
-                    select 
-	                    t1.Name,
+                    SELECT 
+                        t1.Name,
                         t1.Value,
                         t2.Value as t2V,
                         t1.Datetime,
                         t2.Datetime as t2D,
-                        t2.Value -t1.Value as Diff
-                    from 
-                     di_schemas.powerdata_dmpower as t1
-                     join
-                     di_schemas.powerdata_dmpower as t2
-                     on
-                    t1.Name = t2.Name and
-                    date(t1.Datetime) = date(t2.Datetime) and
-                    t2.Datetime = date_add(t1.Datetime,interval 1 minute) 
-                    where
-                    date(t1.Datetime)= @Date and 
-                    t1.Name = @Name
-                    group by 
-                    Datetime;", con);
+                        t2.Value - t1.Value as Diff
+                    FROM 
+                        di_schemas.powerdata_dmpower as t1
+                    JOIN
+                        di_schemas.powerdata_dmpower as t2
+                    ON
+                        t1.Name = t2.Name AND
+                        DATE(t1.Datetime) = DATE(t2.Datetime) AND
+                        t2.Datetime = DATE_ADD(t1.Datetime, INTERVAL 1 MINUTE) 
+                    WHERE
+                        DATE(t1.Datetime) = @Date AND 
+                        t1.Name IN ({names})
+                    Group By
+                        t1.Name,t1.Datetime
+                    ORDER BY 
+                        t1.Datetime;", con);
 
                     query.Parameters.AddWithValue("@Date", date.ToString("yyyy-MM-dd"));
-                    query.Parameters.AddWithValue("@Name", name + "_Demand_KW");
-                    Console.WriteLine("<<<<<<<<<<<<<<<<<<"+ date.ToString("yyyy-MM-dd"));
+
+
                     using (var reader = query.ExecuteReader())
                     {
                         while (reader.Read())
                         {
+                            string color = "";
+                            double diff = Convert.ToDouble(reader["Diff"]);
+                            if (diff >= 0.5) { color = "#FF0000"; }
+                            else if (diff <= -0.5) { color = "#0066CC"; }
+                            else { color = ""; }
                             powerData.Add(new ChartDataModel
                             {
                                 Name = reader["Name"].ToString(),
                                 Value = Convert.ToDouble(reader["Value"]),
                                 Datetime = reader["Datetime"].ToString(),
-                                Diff = Convert.ToDouble(reader["Diff"])
+                                Diff = diff,
+                                color=color
                             });
                         }
-                        Console.WriteLine(powerData+"!!!!!!!!!!");
+                        Console.WriteLine(powerData + "!!!!!!!!!!");
                     }
-
                 }
             }
             catch (Exception ex)
@@ -385,14 +396,15 @@ namespace web_MVC.Controllers
             return powerData;
         }
 
+
         [HttpGet("GetEnergyHistory")]
 
-        public IActionResult GetEnergyHistory(DateTime date,string name)
+        public IActionResult GetEnergyHistory(DateTime date, string name)
         {
             Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
-                var energyData = FetchEnergyHistory(date,name);
+                var energyData = FetchEnergyHistory(date, name);
                 return Ok(energyData);
             }
             catch (Exception ex)
@@ -408,14 +420,16 @@ namespace web_MVC.Controllers
             var energyData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
             Console.WriteLine(connectionString);
+
             try
             {
                 using (var con = new MySqlConnection(connectionString))
                 {
                     con.Open();
-                    var query = new MySqlCommand(@"
+                    var query = new MySqlCommand($@"
                 SELECT 
                     t1.Name,
+                    t1.Value,
                     t1.Value - t2.Value AS diff,
                     DATE_FORMAT(t2.Datetime, '%Y-%m-%d %H:%i:00') AS Datetime
                 FROM 
@@ -428,16 +442,14 @@ namespace web_MVC.Controllers
                     t2.Datetime = DATE_SUB(t1.Datetime, INTERVAL 15 MINUTE)
                 WHERE 
                     DATE(t1.Datetime) = @Date and 
-                    t1.Name = @Name
+                    t1.Name in ({name})
                 GROUP BY 
                     t1.Name, 
+                    Datetime
+                Order By
                     Datetime;", con);
 
                     query.Parameters.AddWithValue("@Date", date.ToString("yyyy-MM-dd"));
-                    query.Parameters.AddWithValue("@Name", name+"_KWH");
-
-                    
-
 
                     Console.WriteLine("Generated SQL Query: " + query.CommandText);
                     foreach (MySqlParameter parameter in query.Parameters)
@@ -445,20 +457,45 @@ namespace web_MVC.Controllers
                         Console.WriteLine($"{parameter.ParameterName}: {parameter.Value}");
                     }
 
+                    // 使用字典來保存每個 Name 的上一個值
+                    var previousValues = new Dictionary<string, double>();
+
                     using (var reader = query.ExecuteReader())
                     {
                         while (reader.Read())
                         {
+                            string currentName = reader["Name"].ToString();
+                            double currentValue = Convert.ToDouble(reader["diff"]);
+                            double currentDiff;
+                            string color="";
+
+                            // 檢查字典中是否已存在該名稱的前一個值
+                            if (previousValues.ContainsKey(currentName))
+                            {
+                                currentDiff = currentValue - previousValues[currentName];
+                            }
+                            else
+                            {
+                                // 如果沒有前一個值，則設置為當前值
+                                currentDiff = 0;
+                            }
+
+                            if(currentDiff >= 0.5) { color = "#FF0000"; }
+                            else if(currentDiff<= -0.5) { color = "#0066CC"; }
+                            else { color = ""; }
                             energyData.Add(new ChartDataModel
                             {
-                                Name = reader["Name"].ToString().Split('_')[0],
-                                Value = Convert.ToDouble(reader["diff"]),
-                                Datetime = reader["Datetime"].ToString()
+                                Name = currentName.Split('_')[0],
+                                Value = currentValue,
+                                Datetime = reader["Datetime"].ToString(),
+                                Diff = currentDiff,
+                                color = color
                             });
 
+                            // 更新該名稱的前一個值
+                            previousValues[currentName] = currentValue;
                         }
                     }
-
                 }
             }
             catch (Exception ex)
@@ -469,6 +506,8 @@ namespace web_MVC.Controllers
 
             return energyData;
         }
+
+
 
     }
 }

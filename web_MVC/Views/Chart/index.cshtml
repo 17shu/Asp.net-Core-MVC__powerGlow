@@ -49,7 +49,7 @@
                 <label for="SelectedNames">Names:</label>
                 <select asp-for="SelectedNames" asp-items="@(new MultiSelectList(Model.Names))" multiple="multiple"></select>
             </div>
-            <button type="submit">Load Data</button>
+        <button class="btn btn-dark searchBtn" type="submit"><i class="bi bi-search"></i></button>
 
         </form>
 

@@ -18,16 +18,20 @@ namespace web_MVC.Controllers
         public IActionResult Index()
         {
             var model = new ChartViewModel();
-            ViewData["ShowSidebar"] = false;
+            ViewData["ShowSidebar"] = true;
             return View(model);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetHistory(string tool, DateTime date)
+        public async Task<IActionResult> GetHistory(string powerTool,string enTool, DateTime date)
         {
             var client = _httpClientFactory.CreateClient();
-            var apiUrl = $"{_configuration["ApiUrl"]}/api/Api/GetPowerHistory?date={date:MM/dd/yyyy}&name={tool}";
-            var apiUrl2 = $"{_configuration["ApiUrl"]}/api/Api/GetEnergyHistory?date={date:MM/dd/yyyy}&name={tool}";
+
+       
+
+
+            var apiUrl = $"{_configuration["ApiUrl"]}/api/Api/GetPowerHistory?date={date:MM/dd/yyyy}&name={powerTool}";
+            var apiUrl2 = $"{_configuration["ApiUrl"]}/api/Api/GetEnergyHistory?date={date:MM/dd/yyyy}&name={enTool}";
 
             Console.WriteLine(apiUrl);
             Console.WriteLine("/////////////" + apiUrl2);
@@ -42,7 +46,6 @@ namespace web_MVC.Controllers
 
                 var combinedJsonData = $"{{\"powerData\": {jsonData1}, \"energyData\": {jsonData2}}}";
 
-                // 解析 JSON 数据并返回
                 return Content(combinedJsonData, "application/json");
             }
 
