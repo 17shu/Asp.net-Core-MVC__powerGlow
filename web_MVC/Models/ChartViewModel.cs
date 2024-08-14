@@ -16,7 +16,7 @@ namespace web_MVC.Models
             Names = new List<string>
             {
                  "TOTAL","TOOL1", "TOOL2", "TOOL3", "TOOL5", "TOOL6", "TOOL7", "TOOL8", "TOOL9", "TOOL10",
-                "TOOL11", "TOOL12_", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
+                "TOOL11", "TOOL12", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
                 "TOOL19", "TOOL20", "AIRCOM"
             };
             SelectedNames = new List<string>();

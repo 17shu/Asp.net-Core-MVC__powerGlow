@@ -60,6 +60,8 @@ table {
     border-width: 2px !important;
     overflow-y: scroll;
     display: block;
+    height:450px;
+    width:fit-content;
 }
 
 

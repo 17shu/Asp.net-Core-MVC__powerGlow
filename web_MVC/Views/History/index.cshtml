@@ -91,17 +91,20 @@
                
                 console.log(toolOption);
                 var selectedTools = toolOption.map(option => `'${option}_Demand_KW'`);
-                var tools = selectedTools.join(",");  // 將陣列元素用逗號分隔，連接成一個字符串
-                console.log(tools);
+                var tools_p = selectedTools.join(",");  // 將陣列元素用逗號分隔，連接成一個字符串
+        
                 selectedTools = toolOption.map(option => `'${option}_KWH'`);
                 var tools_en = selectedTools.join(",");
+                selectedTools = toolOption.map(option => `'${option}'`);
+                var tools = selectedTools.join(",");
+                console.log(tools);
                 
 
                 $.ajax({
                     url: '@Url.Action("GetHistory", "History")',
                     type: 'GET',
                     data: {
-                        powerTool: tools,
+                        powerTool: tools_p,
                         enTool: tools_en,
                         date: date.value
                     },
@@ -110,6 +113,7 @@
                         if (data && data.powerData && data.energyData) {
                             renderChart(data.powerData, 'Power');
                             renderChart(data.energyData, 'Energy');
+                            renderTable(tools);
                         } else {
                             console.error('Unexpected data format received:', data);
                         }
@@ -150,7 +154,6 @@
                 var decreaseColor = '#0066CC';
 
                     data.forEach(function (item) {
-                        console.log(item.name + " // " + item.datetime);
                         var t = 0.1;
                         if (!Labels.includes(item.datetime)) {
                             Labels.push(item.datetime);
@@ -228,6 +231,93 @@
                     });
                 
             }
+            async function renderTable(tools){
+                var response = await fetch(`/api/Api/GetEvent?table=di_schemas.powerevent&name=${tools}&time=${date.value}`);
+                const powerdata = await response.json();
+                var response2 = await fetch(`/api/Api/GetEvent?table=di_schemas.energyevent&name=${tools}&time=${date.value}`);
+                const energydata = await response2.json();
+
+                var container = powerTable;
+                var container2 = energyTable;
+                container.innerHTML = "";
+                container2.innerHTML = "";
+                var table = document.createElement('table'); 
+                var table2 = document.createElement('table');
+
+                container.appendChild(table);
+                container2.appendChild(table2);
+
+                populateTable(table, powerdata);
+                populateTable(table2, energydata);
+
+            }
+
+            function populateTable(table, data) {
+                if (data.length === 0) return;
+
+                // 添加表头
+                var header = table.createTHead();
+                var headerRow = header.insertRow(0);
+                var headerCell1 = document.createElement("th");
+                var headerCell2 = document.createElement("th");
+                var headerCell3 = document.createElement("th");
+                headerCell1.textContent = "Name";
+                headerCell2.textContent = "Value";
+                headerCell3.textContent = "Time";
+                headerRow.appendChild(headerCell1);
+                headerRow.appendChild(headerCell2);
+                headerRow.appendChild(headerCell3);
+
+                // 初始化时间段记录
+                let startTime = data[0].datetime;
+                let endTime = data[0].datetime;
+                let prevItem = data[0];
+
+                // 遍历数据记录
+                data.forEach((item, index) => {
+                    if (index === 0) return; // 跳过第一个元素
+
+                    let prevDate = new Date(prevItem.datetime);
+                    let currDate = new Date(item.datetime);
+
+                    // 检查当前 datetime 是否连续
+                    if ((currDate - prevDate) / 1000 <= 60) { // 如果间隔在1分钟以内
+                        endTime = item.datetime; // 更新结束时间
+                    } else {
+                        // 添加上一段时间或单一时间点的记录
+                        var row = table.insertRow();
+                        var cell1 = row.insertCell(0);
+                        var cell2 = row.insertCell(1);
+                        var cell3 = row.insertCell(2);
+                        cell1.textContent = prevItem.name;
+                        cell2.textContent = prevItem.value;
+                        if (startTime === endTime) {
+                            cell3.textContent = startTime; // 时间不连续，记录单一时间点
+                        } else {
+                            cell3.textContent = `${startTime} - ${endTime}`; // 时间连续，记录时间段
+                        }
+
+                        // 重置开始和结束时间
+                        startTime = item.datetime;
+                        endTime = item.datetime;
+                    }
+                    prevItem = item;
+                });
+
+                // 添加最后一段时间或单一时间点的记录
+                var row = table.insertRow();
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                cell1.textContent = prevItem.name;
+                cell2.textContent = prevItem.value;
+                if (startTime === endTime) {
+                    cell3.textContent = startTime; // 时间不连续，记录单一时间点
+                } else {
+                    cell3.textContent = `${startTime} - ${endTime}`; // 时间连续，记录时间段
+                }
+            }
+
 
             function hexToRgba(hex, alpha) {
                 hex = hex.replace('#', '');

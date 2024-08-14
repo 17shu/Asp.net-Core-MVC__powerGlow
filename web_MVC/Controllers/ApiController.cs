@@ -67,8 +67,7 @@ namespace web_MVC.Controllers
                         while (reader.Read())
                         {
                             string name = reader["Name"].ToString();
-                            double currentValue = Convert.ToDouble(reader["Value"]);
-                            previousValues[name] = currentValue;
+                            previousValues[name] = Convert.ToDouble(reader["value"]);
                         }
                     }
                     var query = new MySqlCommand(@"
@@ -94,6 +93,7 @@ namespace web_MVC.Controllers
                             // 檢查字典中是否已有該名稱的前一個值
                             if (previousValues.ContainsKey(name))
                             {
+                                Console.WriteLine("pre: " + previousValues[name]+" cur: "+currentValue);
                                 diff = currentValue - previousValues[name];
                                 Console.WriteLine($"{name} ({diff}).........................");
                             }
@@ -184,7 +184,7 @@ namespace web_MVC.Controllers
                     DATE(t1.Datetime) = DATE(t2.Datetime) AND 
                     t2.Datetime = DATE_SUB(t1.Datetime, INTERVAL 15 MINUTE)
                 WHERE 
-                    DATE(t1.Datetime) = '2024-05-23' AND 
+                    DATE(t1.Datetime) = '2024-05-01' AND 
                     HOUR(t1.Datetime) * 60 + MINUTE(t1.Datetime) = @MinuteOfDay
                 GROUP BY 
                     t1.Name, 
@@ -461,15 +461,20 @@ namespace web_MVC.Controllers
                             else { color = ""; }
                             powerData.Add(new ChartDataModel
                             {
-                                Name = reader["Name"].ToString(),
+                                Name = reader["Name"].ToString().Split("_")[0],
                                 Value = Convert.ToDouble(reader["Value"]),
                                 Datetime = reader["Datetime"].ToString(),
                                 Diff = diff,
                                 color=color
                             });
+                            //if (Math.Abs(diff) >= 0.5)
+                            //{
+                            //    Console.WriteLine("Call API***************************");
+                            //    await PostEventRecordAsync(reader["Name"].ToString().Split('_')[0], Convert.ToDateTime(reader["Datetime"]), diff, "di_schemas.powerevent");
+                            //}
 
-                           
                         }
+                        
                     }
                 }
             }
@@ -574,6 +579,10 @@ namespace web_MVC.Controllers
 
 
                             previousValues[currentName] = currentValue;
+                            //if (currentDiff >= 0.5 || currentDiff <= -0.5)
+                            //{
+                            //    await PostEventRecordAsync(currentName.Split('_')[0], Convert.ToDateTime(reader["Datetime"]), currentDiff, "di_schemas.energyevent");
+                            //}
                         }
                     }
                 }
@@ -636,44 +645,58 @@ namespace web_MVC.Controllers
                 }
             }
         }
+        
         [HttpGet("GetEvent")]
 
         public IActionResult GetEvent(string table,DateTime time,string name)
         {
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
             var eventData = new List<ChartDataModel>();
-            using (var con = new MySqlConnection(connectionString)) {
 
-                con.Open();
-                var query = new MySqlCommand($@"
-                select * from {table}
-                where 
-                Name in @name and 
-                Date(Time) = @date
-                Group by 
-                Time
-                Order By
-                Time;",con);
-
-                query.Parameters.AddWithValue("@name", name);
-                query.Parameters.AddWithValue("@time", time.ToString("yyyy-MM-dd"));
-
-                using (var reader = query.ExecuteReader())
+            try
+            {
+                using (var con = new MySqlConnection(connectionString))
                 {
-                    while (reader.Read()) {
 
-                        eventData.Add(new ChartDataModel
+                    con.Open();
+                    var query = new MySqlCommand($@"
+                    select * from {table}
+                    where 
+                    Name in ({name}) and 
+                    Date(Time) = @date
+                    Order By
+                    Time,Value desc;", con);
+
+                    query.Parameters.AddWithValue("@name", name);
+                    query.Parameters.AddWithValue("@date", time.ToString("yyyy-MM-dd"));
+
+                    Console.WriteLine(query.CommandText);
+
+                    using (var reader = query.ExecuteReader())
+                    {
+                        while (reader.Read())
                         {
-                            Name = reader["Name"].ToString(),
-                            Datetime = reader["Time"].ToString(),
-                            Value = Convert.ToDouble(reader["Value"])
-                        });
 
+                            eventData.Add(new ChartDataModel
+                            {
+                                Name = reader["Name"].ToString(),
+                                Datetime = reader["Time"].ToString(),
+                                Value = Convert.ToDouble(reader["Value"])
+                            });
+
+                        }
+                        Console.WriteLine(eventData.Count + "??????????");
                     }
+
+
                 }
-            
-            
             }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
+                throw;
+            }
+
 
             return Ok(eventData);
         }
