@@ -53,8 +53,15 @@
         <div id="loadDiv" style="display:none">
             @await Html.PartialAsync("_Loading")
         </div>
-        <div id="historyPowerChart"></div>
-        <div id="historyEnergyChart"></div>
+        <div>
+            <div id="historyPowerChart"></div>
+            <div id="historyPowerTable"></div>
+        </div>
+        <div>
+            <div id="historyEnergyChart"></div>
+            <div id="historyEnergyTable"></div>
+        </div>
+        
     </div>
 
     @section Scripts {
@@ -243,6 +250,8 @@
             var date = document.getElementById('date');
             var PowerHis = document.getElementById('historyPowerChart');
             var EnergyHis = document.getElementById('historyEnergyChart');
+            var powerTable = document.getElementById('historyPowerTable');
+            var energyTable = document.getElementById('historyEnergyTable');
         </script>
     }
 </body>

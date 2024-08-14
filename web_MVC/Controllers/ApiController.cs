@@ -4,6 +4,7 @@ using MySql.Data.MySqlClient;
 using System.Data;
 using System.Diagnostics.Eventing.Reader;
 using System.Text;
+using System.Xml.Linq;
 using web_MVC.Models;
 
 namespace web_MVC.Controllers
@@ -23,12 +24,12 @@ namespace web_MVC.Controllers
 
         [HttpGet("GetPowerData")]
 
-        public IActionResult GetPowerData(int minuteOfDay)
+        public async Task<IActionResult> GetPowerData(int minuteOfDay)
         {
             Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
-                var powerData = FetchPowerData(minuteOfDay);
+                var powerData = await FetchPowerData(minuteOfDay);
                 return Ok(powerData);
             }
             catch (Exception ex)
@@ -39,17 +40,37 @@ namespace web_MVC.Controllers
 
         }
 
-        private List<ChartDataModel> FetchPowerData(int minuteOfDay)
+       
+        private async Task<List<ChartDataModel>> FetchPowerData(int minuteOfDay)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!");
             var powerdata = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
             Console.WriteLine(connectionString);
+
             try
             {
                 using (var con = new MySqlConnection(connectionString))
                 {
                     con.Open();
+                    var prequery = new MySqlCommand(@"
+                    SELECT DISTINCT Name, Value AS value, 
+                    DATE_FORMAT(Datetime, '%Y-%m-%d %H:%i:00') AS Datetime
+                    FROM di_schemas.powerdata_dmpower 
+                    WHERE DATE(Datetime) = '2024-05-03' AND HOUR(Datetime) * 60 + MINUTE(Datetime) = @MinuteOfDay
+                    GROUP BY Name, DATE_FORMAT(Datetime, '%Y-%m-%d %H:%i:00')
+                    ORDER BY Datetime;", con);
+
+                    prequery.Parameters.AddWithValue("@MinuteOfDay", minuteOfDay - 1);
+                    var previousValues = new Dictionary<string, double>();
+                    using(var reader = prequery.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string name = reader["Name"].ToString();
+                            double currentValue = Convert.ToDouble(reader["Value"]);
+                            previousValues[name] = currentValue;
+                        }
+                    }
                     var query = new MySqlCommand(@"
                     SELECT DISTINCT Name, Value AS value, 
                     DATE_FORMAT(Datetime, '%Y-%m-%d %H:%i:00') AS Datetime
@@ -59,21 +80,55 @@ namespace web_MVC.Controllers
                     ORDER BY Datetime;", con);
                     query.Parameters.AddWithValue("@MinuteOfDay", minuteOfDay);
 
+                    // 用來存儲每個名稱的上一個值
+
                     using (var reader = query.ExecuteReader())
                     {
                         while (reader.Read())
                         {
+                            string name = reader["Name"].ToString();
+                            double currentValue = Convert.ToDouble(reader["Value"]);
+                            double diff = 0;
+                            string color = "";
+
+                            // 檢查字典中是否已有該名稱的前一個值
+                            if (previousValues.ContainsKey(name))
+                            {
+                                diff = currentValue - previousValues[name];
+                                Console.WriteLine($"{name} ({diff}).........................");
+                            }
+
+                            // 設置顏色
+                            if (diff >= 0.5)
+                            {
+                                color = "#FF0000";
+                            }
+                            else if (diff <= -0.5)
+                            {
+                                color = "#0066CC";
+                            }
+
                             powerdata.Add(new ChartDataModel
                             {
-                                Name = reader["Name"].ToString().Split('_')[0],
-                                Value = Convert.ToDouble(reader["value"]),
-                                Datetime = reader["Datetime"].ToString()
+                                Name = name,
+                                Value = currentValue,
+                                Datetime = reader["Datetime"].ToString(),
+                                Diff = diff,
+                                color = color
                             });
+
+                            Console.WriteLine("Diff:  " + diff + "&&&&&&&&&&");
+                            // 判斷是否需要呼叫 PostEventRecordAsync
+                            if (Math.Abs(diff) >= 0.5)
+                            {
+                                Console.WriteLine("Call API***************************");
+                                await PostEventRecordAsync(name.Split('_')[0], Convert.ToDateTime(reader["Datetime"]), diff, "di_schemas.powerevent");
+                            }
+
+                            
                         }
                     }
-
                 }
-
             }
             catch (Exception ex)
             {
@@ -82,16 +137,16 @@ namespace web_MVC.Controllers
             }
 
             return powerdata;
-
         }
+
         [HttpGet("GetEnergyData")]
 
-        public IActionResult GetEnergyData(int minuteOfDay)
+        public async Task<IActionResult> GetEnergyData(int minuteOfDay)
         {
             Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
-                var energyData = FetchEnergyData(minuteOfDay);
+                var energyData = await FetchEnergyData(minuteOfDay);
                 return Ok(energyData);
             }
             catch (Exception ex)
@@ -102,7 +157,7 @@ namespace web_MVC.Controllers
 
         }
 
-        private List<ChartDataModel> FetchEnergyData(int minuteOfDay)
+        private async Task<List<ChartDataModel>> FetchEnergyData(int minuteOfDay)
         {
             Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!" + minuteOfDay);
             var energyData = new List<ChartDataModel>();
@@ -136,20 +191,49 @@ namespace web_MVC.Controllers
                     Datetime;", con);
                     query.Parameters.AddWithValue("@MinuteOfDay", minuteOfDay);
 
+                    var previousValues = new Dictionary<string, double>();
+
                     using (var reader = query.ExecuteReader())
                     {
                         while (reader.Read())
                         {
+                            string currentName = reader["Name"].ToString();
+                            double currentValue = Convert.ToDouble(reader["diff"]);
+                            double currentDiff;
+                            string color = "";
+
+                            // 檢查字典中是否已存在該名稱的前一個值
+                            if (previousValues.ContainsKey(currentName))
+                            {
+                                currentDiff = currentValue - previousValues[currentName];
+                            }
+                            else
+                            {
+                                // 如果沒有前一個值，則設置為當前值
+                                currentDiff = 0;
+                            }
+
+                            if (currentDiff >= 0.5) { color = "#FF0000"; }
+                            else if (currentDiff <= -0.5) { color = "#0066CC"; }
+                            else { color = ""; }
                             energyData.Add(new ChartDataModel
                             {
-                                Name = reader["Name"].ToString().Split('_')[0],
-                                Value = Convert.ToDouble(reader["diff"]),
-                                Datetime = reader["Datetime"].ToString()
+                                Name = currentName.Split('_')[0],
+                                Value = currentValue,
+                                Datetime = reader["Datetime"].ToString(),
+                                Diff = currentDiff,
+                                color = color
                             });
+
+
+                            previousValues[currentName] = currentValue;
+                            if (currentDiff >= 0.5 || currentDiff <= -0.5)
+                            {
+                                await PostEventRecordAsync(currentName.Split('_')[0], Convert.ToDateTime(reader["Datetime"]), currentDiff, "di_schemas.energyevent");
+                            }
 
                         }
                     }
-
                 }
             }
             catch (Exception ex)
@@ -298,6 +382,7 @@ namespace web_MVC.Controllers
                         }
                     }
 
+
                 }
             }
             catch (Exception ex)
@@ -383,9 +468,7 @@ namespace web_MVC.Controllers
                                 color=color
                             });
 
-                            if (diff >= 0.5 || diff <= -0.5) {
-                                await PostEventRecordAsync(reader["Name"].ToString().Split('_')[0], Convert.ToDateTime(reader["Datetime"]), diff, "di_schemas.powerevent");
-                            }
+                           
                         }
                     }
                 }
@@ -489,10 +572,7 @@ namespace web_MVC.Controllers
                                 color = color
                             });
 
-                            if (currentDiff >= 0.5 || currentDiff <= -0.5)
-                            {
-                                await PostEventRecordAsync(currentName.Split('_')[0], Convert.ToDateTime(reader["Datetime"]), currentDiff,"di_schemas.energyevent");
-                            }
+
                             previousValues[currentName] = currentValue;
                         }
                     }
@@ -555,6 +635,47 @@ namespace web_MVC.Controllers
                     Console.WriteLine($"Response: success!");
                 }
             }
+        }
+        [HttpGet("GetEvent")]
+
+        public IActionResult GetEvent(string table,DateTime time,string name)
+        {
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            var eventData = new List<ChartDataModel>();
+            using (var con = new MySqlConnection(connectionString)) {
+
+                con.Open();
+                var query = new MySqlCommand($@"
+                select * from {table}
+                where 
+                Name in @name and 
+                Date(Time) = @date
+                Group by 
+                Time
+                Order By
+                Time;",con);
+
+                query.Parameters.AddWithValue("@name", name);
+                query.Parameters.AddWithValue("@time", time.ToString("yyyy-MM-dd"));
+
+                using (var reader = query.ExecuteReader())
+                {
+                    while (reader.Read()) {
+
+                        eventData.Add(new ChartDataModel
+                        {
+                            Name = reader["Name"].ToString(),
+                            Datetime = reader["Time"].ToString(),
+                            Value = Convert.ToDouble(reader["Value"])
+                        });
+
+                    }
+                }
+            
+            
+            }
+
+            return Ok(eventData);
         }
 
 
