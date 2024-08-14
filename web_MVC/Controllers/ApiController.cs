@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MySql.Data.MySqlClient;
-
+using System.Data;
+using System.Diagnostics.Eventing.Reader;
+using System.Text;
 using web_MVC.Models;
 
 namespace web_MVC.Controllers
@@ -15,7 +17,7 @@ namespace web_MVC.Controllers
         public ApiController(IConfiguration configuration, ILogger<ApiController> logger)
         {
             _configuration = configuration;
-            Console.WriteLine("!!!!!!!!" + _configuration.GetConnectionString("MySqlConnection"));
+          
             _logger = logger;
         }
 
@@ -308,11 +310,11 @@ namespace web_MVC.Controllers
         }
 
         [HttpGet("GetPowerHistory")]
-        public IActionResult GetPowerHistoryData(DateTime date, string name)
+        public async Task<IActionResult> GetPowerHistoryData(DateTime date, string name)
         {
             try
             {
-                var powerData = FetchPowerHistoryData(date, name);
+                var powerData =await FetchPowerHistoryData(date, name);
                 return Ok(powerData);
             }
             catch (Exception ex)
@@ -323,18 +325,16 @@ namespace web_MVC.Controllers
 
         }
 
-        private List<ChartDataModel> FetchPowerHistoryData(DateTime date, string names)
+        private async Task<List<ChartDataModel>> FetchPowerHistoryData(DateTime date, string names)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!????????" + string.Join(",", names));
             var powerData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            Console.WriteLine(">>>>>>>>" + date + "<<<<<<<<<<<" + string.Join(",", names));
 
             try
             {
                 using (var con = new MySqlConnection(connectionString))
                 {
-                    con.Open();
+                   await con.OpenAsync();
 
                     // 構建 Name 列表的佔位符
 
@@ -365,9 +365,9 @@ namespace web_MVC.Controllers
                     query.Parameters.AddWithValue("@Date", date.ToString("yyyy-MM-dd"));
 
 
-                    using (var reader = query.ExecuteReader())
+                    using (var reader = await query.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             string color = "";
                             double diff = Convert.ToDouble(reader["Diff"]);
@@ -382,8 +382,11 @@ namespace web_MVC.Controllers
                                 Diff = diff,
                                 color=color
                             });
+
+                            if (diff >= 0.5 || diff <= -0.5) {
+                                await PostEventRecordAsync(reader["Name"].ToString().Split('_')[0], Convert.ToDateTime(reader["Datetime"]), diff, "di_schemas.powerevent");
+                            }
                         }
-                        Console.WriteLine(powerData + "!!!!!!!!!!");
                     }
                 }
             }
@@ -399,12 +402,12 @@ namespace web_MVC.Controllers
 
         [HttpGet("GetEnergyHistory")]
 
-        public IActionResult GetEnergyHistory(DateTime date, string name)
+        public async Task<IActionResult> GetEnergyHistory(DateTime date, string name)
         {
             Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
-                var energyData = FetchEnergyHistory(date, name);
+                var energyData = await FetchEnergyHistory(date, name);
                 return Ok(energyData);
             }
             catch (Exception ex)
@@ -415,7 +418,7 @@ namespace web_MVC.Controllers
 
         }
 
-        private List<ChartDataModel> FetchEnergyHistory(DateTime date, string name)
+        private async Task<List<ChartDataModel>> FetchEnergyHistory(DateTime date, string name)
         {
             var energyData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
@@ -425,7 +428,7 @@ namespace web_MVC.Controllers
             {
                 using (var con = new MySqlConnection(connectionString))
                 {
-                    con.Open();
+                    await con.OpenAsync();
                     var query = new MySqlCommand($@"
                 SELECT 
                     t1.Name,
@@ -451,18 +454,12 @@ namespace web_MVC.Controllers
 
                     query.Parameters.AddWithValue("@Date", date.ToString("yyyy-MM-dd"));
 
-                    Console.WriteLine("Generated SQL Query: " + query.CommandText);
-                    foreach (MySqlParameter parameter in query.Parameters)
-                    {
-                        Console.WriteLine($"{parameter.ParameterName}: {parameter.Value}");
-                    }
-
-                    // 使用字典來保存每個 Name 的上一個值
+                
                     var previousValues = new Dictionary<string, double>();
 
-                    using (var reader = query.ExecuteReader())
+                    using (var reader = await query.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             string currentName = reader["Name"].ToString();
                             double currentValue = Convert.ToDouble(reader["diff"]);
@@ -492,7 +489,10 @@ namespace web_MVC.Controllers
                                 color = color
                             });
 
-                            // 更新該名稱的前一個值
+                            if (currentDiff >= 0.5 || currentDiff <= -0.5)
+                            {
+                                await PostEventRecordAsync(currentName.Split('_')[0], Convert.ToDateTime(reader["Datetime"]), currentDiff,"di_schemas.energyevent");
+                            }
                             previousValues[currentName] = currentValue;
                         }
                     }
@@ -503,10 +503,59 @@ namespace web_MVC.Controllers
                 _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
                 throw;
             }
-
+            Console.WriteLine("?????????"+energyData.Count);
             return energyData;
         }
 
+
+        [HttpPost("eventRecord")]
+        public async  void EventRecord(string name,DateTime time,double value, string table)
+        {
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            using (var con = new MySqlConnection(connectionString))
+            {
+               await con.OpenAsync();
+                    var query = new MySqlCommand($@"
+                    INSERT ignore INTO {table}
+                    (Name, Time, Value)
+                    VALUES
+                    (@Name, @Time, @Value);", con);
+
+                    query.Parameters.AddWithValue("@Name", name);
+                    query.Parameters.AddWithValue("@Time", time);
+                    query.Parameters.AddWithValue("@Value", value);
+
+
+                    var rowsAffected = await query.ExecuteNonQueryAsync();
+                    _logger.LogInformation($"Rows affected: {rowsAffected}");
+                
+            }
+        }
+
+
+
+        [HttpPost]
+        private async Task PostEventRecordAsync(string name, DateTime time, double value, string table)
+        {
+            using (var client = new HttpClient())
+            {
+                var requestUri = $"{_configuration["ApiUrl"]}/api/Api/eventRecord?name={name}&time={time}&value={value}&table={table}";
+
+                // 手動構建 JSON 字符串
+                var jsonContent = $"{{\"Name\":\"{name}\",\"Time\":\"{time:yyyy-MM-ddTHH:mm:ss}\",\"Value\":{value}}}";
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(requestUri, content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Response: {responseContent}");
+                }
+                else {
+                    Console.WriteLine($"Response: success!");
+                }
+            }
+        }
 
 
     }
