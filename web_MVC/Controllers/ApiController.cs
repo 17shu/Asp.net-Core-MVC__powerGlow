@@ -663,14 +663,24 @@ namespace web_MVC.Controllers
                     select * from {table}
                     where 
                     Name in ({name}) and 
-                    Date(Time) = @date
+                    Time like @date
                     Order By
-                    Time,Value desc;", con);
+                    Name,Time,Value desc,Name;", con);
 
-                    query.Parameters.AddWithValue("@name", name);
-                    query.Parameters.AddWithValue("@date", time.ToString("yyyy-MM-dd"));
 
                     Console.WriteLine(query.CommandText);
+                    query.Parameters.AddWithValue("@name", name);
+                    if (time.TimeOfDay != new TimeSpan(0, 0, 0))
+                    {
+                        query.Parameters.AddWithValue("@date", time.ToString("yyyy-MM-dd HH:mm:ss"));
+                    }
+                    else
+                    {
+                        query.Parameters.AddWithValue("@date", time.ToString("yyyy-MM-dd")+'%');
+                    }
+                    
+
+                  
 
                     using (var reader = query.ExecuteReader())
                     {

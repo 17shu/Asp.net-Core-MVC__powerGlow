@@ -47,6 +47,7 @@ div {
 .formStyle {
     margin-top: 60px; 
     margin-left:60px;
+    margin-bottom:50px;
     display: flex;
     justify-content:left;
     font-size:20px;
@@ -170,6 +171,14 @@ body {
     margin-left: 50px;
 }
 
-#chartTitle{
-    display:none;
+#historyPowerChart,
+#historyEnergyChart{
+    margin:10px;
 }
+#historyPowerTable,
+#historyEnergyTable{
+    margin:10px;
+    display:flex;
+    justify-content:center;
+}
+
