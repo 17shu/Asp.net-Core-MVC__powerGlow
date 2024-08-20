@@ -60,7 +60,7 @@ table {
     border-width: 2px !important;
     overflow-y: scroll;
     display: block;
-    height:450px;
+    max-height:450px;
     width:fit-content;
 }
 
@@ -168,4 +168,8 @@ body {
     width: 450px;
     height:50px;
     margin-left: 50px;
+}
+
+#chartTitle{
+    display:none;
 }

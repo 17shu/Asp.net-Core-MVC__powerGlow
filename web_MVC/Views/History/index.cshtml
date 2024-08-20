@@ -45,6 +45,7 @@
 
         
         <button type="button" class="btn btn-dark searchBtn" onclick="LoadData()"><i class="bi bi-search"></i></button>
+      
     </div>
   
    
@@ -54,17 +55,20 @@
             @await Html.PartialAsync("_Loading")
         </div>
         <div>
+            <h3 id="chartTitle">Power</h3>
             <div id="historyPowerChart"></div>
             <div id="historyPowerTable"></div>
         </div>
         <div>
+            <h3 id="chartTitle">Energy</h3>
             <div id="historyEnergyChart"></div>
             <div id="historyEnergyTable"></div>
         </div>
         
     </div>
-
+  
     @section Scripts {
+        @Html.Partial("_Windows")
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -79,6 +83,7 @@
             }
 
             function LoadData() {
+                $('#chartTitle').hide();
                 showLoading();
                 var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
                 var toolOption = [];
@@ -140,6 +145,7 @@
             }
 
             async function renderChart(data, chartType) {
+                $('#chartTitle').show();
                 var container = chartType === 'Power' ? PowerHis : EnergyHis;
                 container.innerHTML = ''; // 清空已有的 canvas 元素
 
@@ -196,39 +202,61 @@
                     var ctx = document.createElement('canvas');
                     container.appendChild(ctx);
 
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: Labels,
-                            datasets: datasets
-                        },
-                        options: {
-                            scales: {
-                                x: {
-                                    min: minDate,
-                                    max: maxDate,
-                                    beginAtZero: true
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                },
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                min: minDate,
+                                max: maxDate,
+                                beginAtZero: true
                             },
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        label: function (context) {
-                                            var label = context.dataset.label || '';
-                                            if (label) {
-                                                label += ': ';
-                                            }
-                                            label += context.raw.y;
-                                            return label;
+                            y: {
+                                beginAtZero: true,
+                            },
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        var label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
                                         }
+                                        label += context.raw.y;
+                                        return label;
                                     }
                                 }
                             }
+                         
+                        },
+                        onClick: (event, elements, chart) => {
+                            if (elements.length > 0) {
+                                const i = elements[0].index;
+                                const selectedTime = chart.data.labels[i];
+
+                                // 過濾出相同時間點的所有資料
+                                const filteredData = chart.data.datasets.map(dataset => {
+                                    return {
+                                        name: dataset.label,
+                                        value: dataset.data.find(d => d.x === selectedTime).y
+                                    };
+                                });
+                                $('#modalLabel').text(selectedTime);
+                                $('#windowsContainer').data('filteredData', filteredData);
+                                $("#windowsContainer").modal("show");
+                                renderPieChart(filteredData);
+                                // 顯示模態框
+                                
+                            }
+
                         }
-                    });
+                    }
+                });
                 
             }
             async function renderTable(tools){
@@ -329,6 +357,51 @@
                 return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
 
+
+            function renderPieChart(filteredData) {
+
+
+                var ctx = document.createElement('canvas');
+                ctx.innerHTML = '';
+                var labels = filteredData.map(item => item.name);
+                var data = filteredData.map(item => item.value);
+                console.log('windows:' + labels);
+                var pie = document.getElementById("pieChart");
+                while (pie.firstChild) {
+                    pie.removeChild(pie.firstChild);
+                }
+                pie.appendChild(ctx);
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: filteredData.map((item, index) => getRandomColor(index)) // 使用隨機顏色或固定顏色
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        var label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.raw;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
             var all = document.getElementById('flexCheckChecked_all');
             all.addEventListener("change", function () {
                 if (all.checked) {
