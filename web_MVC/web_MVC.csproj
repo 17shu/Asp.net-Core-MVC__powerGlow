@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="Views\Login\bg.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.7">
       <PrivateAssets>all</PrivateAssets>
@@ -22,11 +26,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <_ContentIncludedByDefault Remove="Views\Login\bg.cshtml" />
     <_ContentIncludedByDefault Remove="Views\Shared\_Loading.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Views\Shared\bg.cshtml" />
     <None Include="Views\Shared\_Loading.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Views\Login\bg.cshtml" />
   </ItemGroup>
 
 </Project>

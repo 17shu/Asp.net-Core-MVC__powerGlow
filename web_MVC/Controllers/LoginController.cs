@@ -9,5 +9,11 @@ namespace web_MVC.Controllers
             ViewData["ShowSidebar"] = false;
             return View();
         }
+
+        public IActionResult Register()
+        {
+            ViewData["ShowSidebar"] = false;
+            return View();
+        }
     }
 }
