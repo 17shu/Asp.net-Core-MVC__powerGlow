@@ -26,7 +26,6 @@ namespace web_MVC.Controllers
 
         public async Task<IActionResult> GetPowerData(int minuteOfDay)
         {
-            Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
                 var powerData = await FetchPowerData(minuteOfDay);
@@ -248,7 +247,6 @@ namespace web_MVC.Controllers
         [HttpGet("GetPowerHis")]
         public IActionResult GetPowerHisData(DateTime dateS, DateTime dateE, string name)
         {
-            Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
                 var powerData = FetchPowerHisData(dateS, dateE, name);
@@ -275,31 +273,38 @@ namespace web_MVC.Controllers
                     con.Open();
                     var query = new MySqlCommand($@"
                         SELECT DISTINCT
-                            t1.Name as Name,
+                            t1.Name AS Name,
                             t1.Value AS max_value,
-                            t1.Datetime 
-                        FROM 
+                            t1.Datetime AS time
+                        FROM
                             di_schemas.powerdata_dmpower t1
                         JOIN (
-                            SELECT DISTINCT
+                            SELECT 
+                                Name,
                                 DATE(Datetime) AS date,
-                                MAX(CAST(Value AS DOUBLE)) AS max_value
-                            FROM 
+                                MAX(Value) AS max_value
+                            FROM
                                 di_schemas.powerdata_dmpower
-                            WHERE 
+                            WHERE
                                 Datetime BETWEEN @DateS AND @DateE
                                 AND Name = @Name
-                            GROUP BY 
+                            GROUP BY
+                                Name,
                                 DATE(Datetime)
-                        ) t2 ON DATE(t1.Datetime) = t2.date 
+                        ) t2 ON t1.Name = t2.Name 
+                           AND DATE(t1.Datetime) = t2.date
                            AND t1.Value = t2.max_value
-                        GROUP BY
-                            t2.date
-                        ORDER BY 
+                        WHERE
+                            t1.Name = @Name
+                        Group by 
+                        Date(Datetime)
+                        ORDER BY
                             t1.Datetime;", con);
                     query.Parameters.AddWithValue("@DateS", dateS.ToString("yyyy-MM-dd") + " 00:00:00");
                     query.Parameters.AddWithValue("@DateE", dateE.ToString("yyyy-MM-dd") + " 23:59:59");
                     query.Parameters.AddWithValue("@Name", name + "_Demand_KW");
+
+                    Console.WriteLine(query.CommandText+ dateS.ToString("yyyy-MM-dd") + " 00:00:00       "+  dateE.ToString("yyyy-MM-dd") + " 23:59:59     "+name+"Demand_Kw");
 
                     using (var reader = query.ExecuteReader())
                     {
@@ -309,7 +314,7 @@ namespace web_MVC.Controllers
                             {
                                 Name = reader["Name"].ToString(),
                                 Value = Convert.ToDouble(reader["max_value"]),
-                                Datetime = reader["Datetime"].ToString()
+                                Datetime = reader["time"].ToString()
                             });
                         }
                     }

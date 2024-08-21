@@ -30,8 +30,9 @@
         </div>
         
     </div>
-      
-
+     <div class="logBtn">
+         <a href="@Url.Action("Index","Login")">LOG OUT</a>
+     </div>
 </div>
 
 <script>
@@ -122,6 +123,16 @@
            font-size:22px;
            border-style:inset;
            border-width:1px 0px;
+           a{
+               color:#EBF4FA;
+               text-decoration:none;
+               font-family: monospace;
+           }
+     }
+     .logBtn{
+         position:sticky;
+         botton:0px;
+         font-size:24px;
            a{
                color:#EBF4FA;
                text-decoration:none;

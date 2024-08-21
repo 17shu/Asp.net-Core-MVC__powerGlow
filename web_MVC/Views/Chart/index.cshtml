@@ -46,9 +46,10 @@
                 <input asp-for="EndDate" type="date" />
             </div>
             <div class="optionDiv">
-                <label for="SelectedNames">Names:</label>
-                <select asp-for="SelectedNames" asp-items="@(new MultiSelectList(Model.Names))" multiple="multiple"></select>
+                <label for="SelectedName">Name:</label>
+                <select asp-for="SelectedNames" asp-items="@(new SelectList(Model.Names))"></select>
             </div>
+
         <button class="btn btn-dark searchBtn" type="submit"><i class="bi bi-search"></i></button>
 
         </form>
@@ -124,7 +125,7 @@
                         console.log('Data received from server:', data);
                         if (data && Array.isArray(data)) {
                             console.log("Names in data: ", data.map(item => item.name));
-                            renderChart(data, $('#SelectedChartType').val());
+                            renderChart(data, $('#SelectedChartType').val(), $('#SelectedOption').val());
                             renderPowerTable(data);
                             renderEnergyTable(data);
                         } else {
@@ -137,12 +138,13 @@
                 });
             });
 
-            function renderChart(data, selectedChartType) {
+            function renderChart(data, selectedChartType, option) {
                 $('#chartContainer').empty();
                 var labels = [];
                 var datasets = [];
                 var minDate = null;
                 var maxDate = null;
+                console.log('selected  ' + selectedChartType);
 
                 if (!data || !Array.isArray(data)) {
                     console.error('Invalid data:', data);
@@ -152,19 +154,24 @@
                 var powerData = data.filter(item => item.name && item.name.includes('_Demand_KW'));
                 var energyData = data.filter(item => item.name && item.name.includes('_KWH'));
 
-                console.log('Power Data:', powerData);
-                console.log('Energy Data:', energyData);
+                if (option == 'power' || option == 'Mix') {
+                    minDate = powerData[0].datetime;
+                    maxDate = powerData[powerData.length - 1].datetime;
+                } else {
+                    minDate = energyData[0].datetime;
+                    maxDate = energyData[energyData.length - 1].datetime;
+                }
 
+                console.log('min:' + minDate);
+                console.log('max:' + maxDate);
+
+                // 處理 powerData
                 powerData.forEach(function (item) {
                     var chartType = selectedChartType;
                     if (selectedChartType == 'Mix') chartType = 'line';
-                    console.log("power type: " + chartType);
-                    var itemDate = new Date(item.datetime);
-                    if (!minDate || itemDate < minDate) minDate = itemDate;
-                    if (!maxDate || itemDate > maxDate) maxDate = itemDate;
 
-                    if (!labels.includes(itemDate)) {
-                        labels.push(itemDate);
+                    if (!labels.includes(item.datetime)) {
+                        labels.push(item.datetime);
                     }
 
                     var dataset = datasets.find(d => d.label === item.name);
@@ -182,18 +189,24 @@
                         };
                         datasets.push(dataset);
                     }
-                    dataset.data.push({ x: itemDate, y: item.value });
-                    console.log("itemDate: " + itemDate + " value: " + item.value);
+                    dataset.data.push({ x: item.datetime, y: item.value });
                     dataset.pointBackgroundColor.push('rgba(22, 22, 0, 0.1)');
                     dataset.pointBorderColor.push('rgba(10, 10, 100, 1)');
                     dataset.pointRadius.push(5);
                 });
 
-                energyData.forEach(function (item) {
+                // 處理 energyData，在 Mix 模式下忽略 energyData 的原始 X 值，使用 powerData 的日期
+                energyData.forEach(function (item, index) {
                     var chartType = selectedChartType;
                     if (selectedChartType == "Mix") chartType = 'bar';
-                    console.log("energy type: " + chartType);
-                    var itemDate = new Date(item.datetime);
+
+                    var correspondingPowerData = powerData[index]; // 根據 index 找到對應的 powerData
+                    var xValue = option == 'Mix' && correspondingPowerData ? correspondingPowerData.datetime : item.datetime;
+
+                    if (!labels.includes(xValue) && option != 'Mix') {
+                        labels.push(xValue);
+                    }
+
                     var dataset = datasets.find(d => d.label === item.name);
                     if (!dataset) {
                         dataset = {
@@ -210,7 +223,7 @@
                         };
                         datasets.push(dataset);
                     }
-                    dataset.data.push({ x: itemDate, y: item.value });
+                    dataset.data.push({ x: xValue, y: item.value });
                     dataset.pointBackgroundColor.push('rgba(255, 99, 132, 0.5)');
                     dataset.pointBorderColor.push('rgba(255, 99, 132, 1)');
                     dataset.pointRadius.push(5);
@@ -228,14 +241,6 @@
                     options: {
                         scales: {
                             x: {
-                                type: 'time',
-                                time: {
-                                    unit: 'day',
-                                    displayFormats: {
-                                        day: 'yyyy-MM-dd HH:mm:ss'
-                                    },
-                                    tooltipFormat: 'yyyy-MM-dd HH:mm:ss'
-                                },
                                 min: minDate,
                                 max: maxDate,
                                 beginAtZero: true
@@ -272,6 +277,7 @@
             }
 
 
+
             // table setting 
 
 
@@ -281,7 +287,6 @@
                 powerTableBody.empty();
 
                 var powerData = data.filter(item => item.name && item.name.includes('_Demand_KW'));
-                console.log('Power Table Data:', powerData);
                 powerData.forEach(function (item) {
                     var row = '<tr>' +
                         '<td>' + item.name + '</td>' +
@@ -297,7 +302,6 @@
                 energyTableBody.empty();
 
                 var energyData = data.filter(item => item.name && item.name.includes('_KWH'));
-                console.log('Energy Table Data:', energyData);
                 energyData.forEach(function (item) {
                     var row = '<tr>' +
                         '<td>' + item.name + '</td>' +
