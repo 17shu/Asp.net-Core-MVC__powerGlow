@@ -84,9 +84,10 @@
                             }),
                             success: function () {
                                 alert('Registration successful!');
+                                window.location.href = '/Login/Index';
                             },
                             complete: function () {
-                               window.location.href = '/Login/Index';
+                               
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
                                 if (jqXHR.status === 400) {
