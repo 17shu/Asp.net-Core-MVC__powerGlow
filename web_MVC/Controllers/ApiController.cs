@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Google.Protobuf.WellKnownTypes;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MySql.Data.MySqlClient;
 using System.Data;
@@ -716,6 +717,124 @@ namespace web_MVC.Controllers
             return Ok(eventData);
         }
 
+        [HttpPost("register")]
+        public IActionResult Register([FromBody] Dictionary<string, string> data)
+        {
+            string name = data["name"];
+            string email = data["email"];
+            string pw = data["pw"];
+
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            using (var con = new MySqlConnection(connectionString))
+            {
+                con.Open();
+                var query = new MySqlCommand($@"
+                INSERT INTO di_schemas.company (Name, registedTime) 
+                SELECT @name, NOW()
+                FROM DUAL
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM di_schemas.company WHERE Name = @name
+                );", con);
+                query.Parameters.AddWithValue("@name", name);
+                query.ExecuteNonQuery();
+                var c_id = 0;
+                query = new MySqlCommand(@"SELECT c_id FROM di_schemas.company WHERE Name = @name;",con);
+                query.Parameters.AddWithValue("@name", name);
+                using (var reader = query.ExecuteReader())
+                {
+                    while (reader.Read()) {  c_id = Convert.ToInt32(reader["c_id"]);}
+                   
+                }
+
+                query = new MySqlCommand(@"SELECT COUNT(*) as c FROM di_schemas.users WHERE Email = @Email;", con);
+                query.Parameters.AddWithValue("@Email",email);
+
+                using(var reader = query.ExecuteReader())
+                {
+                    
+                    while (reader.Read())
+                    {
+                        var count = Convert.ToInt32(reader["c"]);
+                        if (count > 0)
+                        {
+                            return BadRequest(new { message = "Email already exists. Please use a different email address." });
+                        }
+                    }
+                }
+
+                query = new MySqlCommand($@"
+                    INSERT IGNORE INTO di_schemas.users (c_id, Company, Email, Password, registedTime)
+                    VALUES({c_id}, @name, @Email, @Pw, NOW());", con);
+
+                query.Parameters.AddWithValue("@name", name);
+                query.Parameters.AddWithValue("@Email", email);
+                query.Parameters.AddWithValue("@Pw", pw);
+
+
+          
+
+               
+                Console.WriteLine(query.CommandText);
+                var rowsAffected = query.ExecuteNonQuery();
+                _logger.LogInformation($"Rows affected: {rowsAffected}");
+
+                return Ok(); // 返回成功响应
+            }
+        }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] Dictionary<string, string> data)
+        {
+            var name = data["name"];
+            var pw = data["pw"];
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            using (var con = new MySqlConnection(connectionString)) { 
+            
+                con.Open();
+                var query = new MySqlCommand(@"
+                select count(*) as c from di_schemas.users where Company = @name or Email = @name", con);
+                query.Parameters.AddWithValue("@name", name);
+
+                Console.WriteLine("query: "+query.CommandText+"  name:"+name );
+                using (var reader = query.ExecuteReader())
+                {
+                    var count = 0;
+                    while (reader.Read()) { 
+                        count = Convert.ToInt32(reader["c"]);
+                        Console.WriteLine("count:"+count);
+                    }
+                   
+                    if (count > 0) {
+                        query = new MySqlCommand(@"select count(*) as c from di_schemas.users where Password = @pw", con);
+                        query.Parameters.AddWithValue("@pw", pw);
+                        reader.Close();
+                        using (var reader2 = query.ExecuteReader())
+                        {
+                            while (reader2.Read())
+                            {
+                                count = Convert.ToInt32(reader2["c"]);
+                            }
+                            if (count > 0) {
+                                return Ok();
+                            }
+                            else
+                            {
+                                return BadRequest(new { message = "wrong password!" });
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "the account doesn't exist"});
+                    }
+                }
+            
+            
+            
+            }
+
+        }
 
     }
 }

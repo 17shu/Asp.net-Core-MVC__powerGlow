@@ -9,7 +9,7 @@
         @await Html.PartialAsync("bg")
         <div class="LogBoxContainer">
             <h1>PowerGlow</h1>
-            <div class="input-group mb-3">
+            <div class="input-group mb-3" id="account">
               <span class="input-group-text" id="basic-addon1">Account/Email</span>
               <input type="text" class="form-control" placeholder="input your email/account" aria-label="Username" aria-describedby="basic-addon1">
             </div>
@@ -18,12 +18,12 @@
                 <input type="text" class="form-control" placeholder="input your password" aria-label="Username" aria-describedby="basic-addon1">
                 <i class="bi bi-eye-fill"></i>
             </div>
-
+            <div id="signText"></div>
             <div class="line">
                 <a href="#">Forget Password ?</a> 
                 <a href="@Url.Action("Register","Login")">Don't have account ?</a>
             </di>
-   
+                <button class="btn btn-primary" type="submit" id="login">Log IN</button>
         </div>
     </div>
    
@@ -32,6 +32,7 @@
 </html>
 @section scripts{
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
     <script>
         $(document).ready(function () {
             $("#showPassword i").on('click', function (event) {
@@ -46,6 +47,48 @@
                     $('#showPassword i').addClass("bi-eye-fill");
                 }
             });
+
+            $('#login').on('click', function (event) {
+                login();
+            })
+
+         
+            function login() {
+                var pw = $('#showPassword input').val();
+                var account = $('#account input').val();
+                var key = CryptoJS.enc.Utf8.parse('54160469');
+                var encrypted = CryptoJS.AES.encrypt(pw, key, {
+                    mode: CryptoJS.mode.ECB,
+                    padding: CryptoJS.pad.Pkcs7
+                }).toString();
+                console.log(account + "   / " + encrypted);
+                $.ajax({
+                    url: '/api/Api/login',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: account,
+                        pw: encrypted
+                    }),
+                    success: function () {
+                        alert("Welcome to PowerGlow System");
+                        window.location.href = '/Home/Index';
+                    },
+                    complete: function () {
+
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        if (jqXHR.status === 400) {
+                            var response = JSON.parse(jqXHR.responseText);
+                            $('#signText').text(response.message); // 显示来自服务器的错误消息
+                        } else {
+                            $('#signText').text('');
+                            alert('An error occurred during log in. Please try again.');
+                        }
+                    }
+                })
+            }
+     
         });
 
 
@@ -105,5 +148,9 @@
         cursor:pointer;
     }
 
+    #signText {
+        color: darkred;
+        font-size: 18px;
+    }
 
 </style>

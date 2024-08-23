@@ -9,9 +9,14 @@
         @await Html.PartialAsync("bg")
         <div class="LogBoxContainer">
             <h1>Registration</h1>
+
+            <div class="hint">
+                <i class="bi bi-exclamation-circle"></i>
+                <span>The company name can be used with various email addresses. </span>
+            </div>
             <div class="input-group mb-3" id="user">
                 <span class="input-group-text" id="basic-addon1">Account</span>
-                <input type="text" class="form-control" placeholder="username" aria-label="Username" aria-describedby="basic-addon1">
+                <input type="text" class="form-control" placeholder="Company Name" aria-label="Username" aria-describedby="basic-addon1">
             </div>
             <div class="input-group mb-3" id="email">
                 <span class="input-group-text" id="basic-addon1">Email</span>
@@ -40,8 +45,6 @@
     <script>
         $(document).ready(function () {
             $('#register').on('click', function(event){
-                console.log($('#confirmPW input').val());
-                
                 register();
             })
 
@@ -53,65 +56,81 @@
 
                 if (user && email && pw && cpw) {
                     if (cpw != pw) {
-                        $('#signText').text('wrong password');
+                        $('#signText').text('Passwords do not match');
                         $('#confirmPW').addClass('wrong');
-                    }
-                    else {
+                    } else {
                         $('#signText').text('');
                         $('#confirmPW').removeClass('wrong');
-                        var key = CryptoJS.enc.Utf8.parse('54160469');
+                        $('#passwod').removeClass('wrong');
+                        $('#user').removeClass('wrong');
+                        $('#email').removeClass('wromg');
+
+                        var key = CryptoJS.enc.Utf8.parse('54160469'); 
                         var encrypted = CryptoJS.AES.encrypt(pw, key, {
-                            mode: CryptoJS.mode.ECB, // 可以選擇不同的模式，如 ECB、CBC 等
+                            mode: CryptoJS.mode.ECB,
                             padding: CryptoJS.pad.Pkcs7
                         }).toString();
 
-                        console.log('pw:' + encrypted);
-                    }
 
-                }
-                else {
-                    if (!user) {
-                        $('#signText').text('user name can not be empty!');
-                        $('#user').addClass('wrong');
+
+                        $.ajax({
+                            url: '/api/Api/register', 
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                name: user,
+                                pw: encrypted,
+                                email: email
+                            }),
+                            success: function () {
+                                alert('Registration successful!');
+                            },
+                            complete: function () {
+                               window.location.href = '/Login/Index';
+                            },
+                            error: function (jqXHR, textStatus, errorThrown) {
+                                if (jqXHR.status === 400) {
+                                    var response = JSON.parse(jqXHR.responseText);
+                                    $('#signText').text(response.message); // 显示来自服务器的错误消息
+                                } else {
+                                    $('#signText').text('');
+                                    alert('An error occurred during registration. Please try again.');
+                                }
+                            }
+                        });
+
                     }
-                    else {
-                        $('#signText').text('');
+                } else {
+                    if (!user) {
+                        $('#signText').text('Username cannot be empty!');
+                        $('#user').addClass('wrong');
+                    } else {
                         $('#user').removeClass('wrong');
                     }
 
                     if (!email) {
-                        $('#signText').text('Email can not be empty!');
+                        $('#signText').text('Email cannot be empty!');
                         $('#email').addClass('wrong');
-                    }
-                    else {
-                        $('#signText').text('');
+                    } else {
                         $('#email').removeClass('wrong');
                     }
 
                     if (!pw) {
-                        $('#signText').text('password can not be empty!');
+                        $('#signText').text('Password cannot be empty!');
                         $('#password').addClass('wrong');
-                    }
-                    else {
-                        $('#signText').text('');
+                    } else {
                         $('#password').removeClass('wrong');
                     }
+
                     if (!cpw) {
-                        $('#signText').text('confirm password can not be empty!');
+                        $('#signText').text('Confirm password cannot be empty!');
                         $('#confirmPW').addClass('wrong');
-                    }
-                    else {
-                        $('#signText').Text('');
+                    } else {
                         $('#confirmPW').removeClass('wrong');
                     }
-                    
                 }
-
-
-               
-
-
             }
+
         });
 
 
@@ -181,7 +200,17 @@
         color:darkred;
         font-size:18px;
     }
-    
+    .hint{
+        width:500px;
+        height:30px;
+        flex-wrap:wrap;
+        border-radius:10px;
+        background-color: #E9FEFF;
+        border: 2px solid #D9F9FC;
+        font-size: 14px;
+        color: #74C2D5;
+        padding:3px;
+    }
 
 
 </style>
