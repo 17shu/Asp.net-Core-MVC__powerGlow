@@ -22,8 +22,8 @@
             <div class="line">
                 <a href="#">Forget Password ?</a> 
                 <a href="@Url.Action("Register","Login")">Don't have account ?</a>
-            </di>
-                <button class="btn btn-primary" type="submit" id="login">Log IN</button>
+            </div>
+            <button class="btn btn-primary" type="submit" id="login">LOG IN</button>
         </div>
     </div>
    
@@ -75,7 +75,6 @@
                         window.location.href = '/Chart/Index';
                     },
                     complete: function () {
-
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
                         if (jqXHR.status === 400) {
