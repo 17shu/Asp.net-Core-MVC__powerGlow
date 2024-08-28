@@ -122,7 +122,6 @@
             formData[this.name] = this.value;
         });
 
-        console.log("Form Data:", formData);
 
         if(formData.SelectedOption == "Mix"){
           fetchMix("Mix",formData.StartDate, formData.EndDate, formData.SelectedNames);
@@ -134,9 +133,9 @@
         
     });
      async function fetchMix(option,dateS, dateE, name){
-         var response = await fetch(`api/Api/GetPowerHis?dateeS=${dateS}&dateE=${dateE}&name=${name}`);
+         var response = await fetch(`/api/Api/GetPowerHis?dateS=${dateS}&dateE=${dateE}&name=${name}`);
          var data = await response.json();
-         var response1 = await fetch(`api/Api/GetEnergy?dateeS=${dateS}&dateE=${dateE}&name=${name}`);
+         var response1 = await fetch(`/api/Api/GetEnergyHis?dateS=${dateS}&dateE=${dateE}&name=${name}`);
          var data1 = await response1.json();
          renderPowerTable(data);
          renderEnergyTable(data1);
