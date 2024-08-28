@@ -82,56 +82,57 @@
             function hideLoading() {
                 $("#loadDiv").hide();
             }
-
-            function LoadData() {
+            var tools;
+            async function LoadData() {
                 $('#chartTitle').hide();
                 showLoading();
+
                 var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
                 var toolOption = [];
-                if (checkboxes[0].value == 'all') toolOption = @Html.Raw(Json.Serialize(Model.Names));
-                else {
+
+                if (checkboxes[0].value == 'all') {
+                    toolOption = @Html.Raw(Json.Serialize(Model.Names));
+                } else {
                     checkboxes.forEach(function (checkbox) {
                         toolOption.push(checkbox.value);
                     });
                 }
-               
+
                 console.log(toolOption);
+
                 var selectedTools = toolOption.map(option => `'${option}_Demand_KW'`);
-                var tools_p = selectedTools.join(",");  // 將陣列元素用逗號分隔，連接成一個字符串
-        
+                var tools_p = selectedTools.join(","); 
+
                 selectedTools = toolOption.map(option => `'${option}_KWH'`);
                 var tools_en = selectedTools.join(",");
+
                 selectedTools = toolOption.map(option => `'${option}'`);
                 var toolsS = selectedTools.join(",");
                 tools = toolsS;
-                
 
-                $.ajax({
-                    url: '@Url.Action("GetHistory", "History")',
-                    type: 'GET',
-                    data: {
-                        powerTool: tools_p,
-                        enTool: tools_en,
-                        date: date.value
-                    },
-                    success: function (data) {
-                        console.log('Data received from server:', data);
-                        if (data && data.powerData && data.energyData) {
-                            renderChart(data.powerData, 'Power');
-                            renderChart(data.energyData, 'Energy');
-                            renderTable(toolsS);
-                        } else {
-                            console.error('Unexpected data format received:', data);
-                        }
-                    },
-                    complete: function () {
+               
+                var formattedDate = date.value; // 格式化日期字符串
+
+                try {
+                    var powerR = await fetch(`/api/Api/GetPowerHistory?date=${formattedDate}&name=${tools_p}`);
+                    var powerData = await powerR.json();
+                    renderChart(powerData, 'Power');
+
+                    var energyR = await fetch(`/api/Api/GetEnergyHistory?date=${formattedDate}&name=${tools_en}`);
+                    var energyData = await energyR.json();
+                    renderChart(energyData, 'Energy');
+
+                    renderTable(toolsS);
+
+                    if (energyData && powerData) {
                         hideLoading();
-                    },
-                    error: function (error) {
-                        console.error('Error during AJAX request:', error);
                     }
-                });
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    hideLoading(); // 确保在出现错误时隐藏加载状态
+                }
             }
+
 
             function getRandomColor(use) {
                 var colors = [
@@ -288,7 +289,8 @@
                 populateTable(table2, energydata);
 
             }
-           async  function renderEventTable(tools,datetime) {
+           
+            async  function renderEventTable(tools,datetime) {
                 var response = await fetch(`/api/Api/GetEvent?table=di_schemas.powerevent&name=${tools}&time=${datetime}`);
                 const data = await response.json();
 
