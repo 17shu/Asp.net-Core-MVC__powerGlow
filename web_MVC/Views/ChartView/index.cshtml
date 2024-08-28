@@ -319,13 +319,13 @@
                 }
 
                 async function fetchPowerData() {
-                    const response = await fetch(`/ChartView/getPowerData?currentMin=${currentMin}`);
+                    const response = await fetch(`/api/Api/GetPowerData?minuteOfDay=${currentMin}`);
                     const data = await response.json();
                     updateChart(powerChart, powerDataStore, data);
                 }
 
                 async function fetchEnergyData() {
-                    const response = await fetch(`/ChartView/getEnergyData?currentMin=${currentMin}`);
+                    const response = await fetch(`/api/Api/GetEnergyData?minuteOfDay=${currentMin}`);
                     const data = await response.json();
                     updateEnergyChart(energyChart, energyDataStore, data);
                 }
