@@ -112,34 +112,70 @@
       
        
         $(document).ready(function () {
+                   $('#chartForm').submit(function (e) {
+        e.preventDefault(); // 阻止表单的默认提交行为
 
-            
-            $('#chartForm').submit(function (e) {
-                e.preventDefault();
+        // 使用 serializeArray() 获取表单数据，并转换为对象
+        var formDataArray = $(this).serializeArray();
+        var formData = {};
+        $.each(formDataArray, function () {
+            formData[this.name] = this.value;
+        });
 
-                $.ajax({
-                    url: '@Url.Action("LoadData", "Chart")',
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    success: function (data) {
-                        console.log('Data received from server:', data);
-                        if (data && Array.isArray(data)) {
-                            console.log("Names in data: ", data.map(item => item.name));
-                            renderChart(data, $('#SelectedChartType').val(), $('#SelectedOption').val());
-                            renderPowerTable(data);
-                            renderEnergyTable(data);
-                        } else {
-                            console.error('Unexpected data format received:', data);
-                        }
-                    },
-                    error: function (error) {
-                        console.error('Error during AJAX request:', error);
-                    }
-                });
-            });
+        console.log("Form Data:", formData);
+
+        if(formData.SelectedOption == "Mix"){
+          fetchMix("Mix",formData.StartDate, formData.EndDate, formData.SelectedNames);
+        }
+        else{
+            fetchData(formData.SelectedOption, formData.StartDate, formData.EndDate, formData.SelectedNames);
+        }
+        
+        
+    });
+     async function fetchMix(option,dateS, dateE, name){
+         var response = await fetch(`api/Api/GetPowerHis?dateeS=${dateS}&dateE=${dateE}&name=${name}`);
+         var data = await response.json();
+         var response1 = await fetch(`api/Api/GetEnergy?dateeS=${dateS}&dateE=${dateE}&name=${name}`);
+         var data1 = await response1.json();
+         renderPowerTable(data);
+         renderEnergyTable(data1);
+         var datas = data.concat(data1);
+         renderChart(datas,$('#SelectedChartType').val(), option);
+    }
+    function fetchData(option, dateS, dateE, name) {
+        var type = "GetPowerHis";
+        if (option == "energy" || option == "Mix") type = "GetEnergyHis";
+        var apiurl = `/api/Api/${type}`;
+        console.log("API: "+apiurl);
+        $.ajax({
+            url: apiurl,
+            type: 'GET',
+            data: {
+                dateS: dateS,
+                dateE: dateE,
+                name: name
+            },
+            success: function (data) {
+                console.log('Data received from server:', data);
+                if (data && Array.isArray(data)) {
+                        renderChart(data, $('#SelectedChartType').val(), option);
+                        renderPowerTable(data);
+                        renderEnergyTable(data);
+                } else {
+                    console.error('Unexpected data format received:', data);
+                }
+            },
+            error: function (error) {
+                console.error('Error during AJAX request:', error);
+            }
+        });
+    }
+           
 
             function renderChart(data, selectedChartType, option) {
-                $('#chartContainer').empty();
+                 $('#chartContainer').empty();
+               
                 var labels = [];
                 var datasets = [];
                 var minDate = null;
