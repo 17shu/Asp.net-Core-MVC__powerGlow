@@ -1,0 +1,122 @@
+﻿
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" type="text/css">
+</head>
+<div class="title">
+    <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
+    <h2>History Control</h2>
+</div>
+<div id ="DateS">
+    <p class="fontStyle" >Start Date :</p>
+    <input type="date" class="form-control dateStyle"  name="date" />
+</div>
+<div id ="DateE">
+    <p class="fontStyle" >End Date :</p>
+    <input type="date" class="form-control dateStyle" name="date" />
+</div>
+
+<button id="btn"> search </button>
+<div id="DPchart"></div>
+
+
+@section scripts{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+
+        $(document).ready(function () {
+            $('#btn').on('click', function (event) {
+                showDPchart();
+            });
+
+            async function showDPchart() {
+                var start = $('#DateS input').val();
+                var end = $('#DateE input').val();
+
+                console.log("start:" + start + " /end:" + end);
+                var color = '#47A2F2';
+                var response = await fetch(`/api/Api/Demand?start=${start}&end=${end}`);
+                var DPdata = await response.json();
+
+                console.log('datas: ' + DPdata);
+
+                var datasets = [];
+                var Labels = [];
+
+                DPdata.forEach(function (data) {
+                    // 格式化日期，並將其推入 Labels
+                    var formattedDate = new Date(data.datetime).toLocaleDateString();
+                    if (!Labels.includes(formattedDate)) {
+                        Labels.push(formattedDate);
+                    }
+
+                    // 查找或創建 dataset
+                    var dataset = datasets.find(d => d.label === data.name);
+                    if (!dataset) {
+                        dataset = {
+                            label: data.name,
+                            data: [],  // 數據點
+                            borderColor: color,
+                            backgroundColor: color,
+                            showLine: false, // 確保不連接點
+                            pointBackgroundColor: [],
+                            pointBorderColor: [],
+                            pointRadius: []
+                        };
+                        datasets.push(dataset);
+                    }
+
+                    // 推入散點數據
+                    dataset.data.push({ x: formattedDate, y: data.value });
+                    dataset.pointBackgroundColor.push(color);
+                    dataset.pointBorderColor.push(color);
+                    dataset.pointRadius.push(8);
+                });
+
+                var ctx = document.createElement('canvas');
+                $('#DPchart').empty().append(ctx); // 清除舊的圖表，插入新的
+
+                new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        labels: Labels, // 使用格式化的日期作為 X 軸標籤
+                        datasets: datasets
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'category', // 使用 category 而非時間類型的 x 軸
+                                labels: Labels, // 指定 X 軸的標籤
+                                beginAtZero: false
+                            },
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        var label = context.dataset.label || '';
+                                        var date = context.raw.x;
+                                        var value = context.raw.y;
+                                        if (label) {
+                                            label += ` (${date}): `;
+                                        }
+                                        label += value;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+
+    </script>
+}
