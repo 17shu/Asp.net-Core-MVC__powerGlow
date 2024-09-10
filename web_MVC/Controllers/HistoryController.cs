@@ -22,6 +22,12 @@ namespace web_MVC.Controllers
             return View(model);
         }
 
+        public IActionResult Control()
+        {
+            return View();
+        }
+    
+
         [HttpGet]
         public async Task<IActionResult> GetHistory(string powerTool,string enTool, DateTime date)
         {

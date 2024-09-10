@@ -33,7 +33,6 @@ namespace web_MVC.Controllers
 
         public IActionResult Index()
         {
-            ViewData["ShowSidebar"] = false;
             return View();
         }
 

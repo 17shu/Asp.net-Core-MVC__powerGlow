@@ -836,5 +836,57 @@ namespace web_MVC.Controllers
 
         }
 
+
+        [HttpGet("Demand")]
+
+        public IActionResult GetDemandPower(DateTime start, DateTime end)
+        {
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            var datas = new List<DP>();
+            try
+            {
+                using (var con = new MySqlConnection(connectionString))
+                {
+                    con.Open();
+                    var query = new MySqlCommand(@"select Max(Value) as value,Name,Time from di_schemas.powerevent where Date(Time) between @start and @end and Time(Time) between '02:00:00' and '23:59:00' and Name = 'TOTAL' Group by Date(Time);
+                ", con);
+                    query.Parameters.AddWithValue("@start", start);
+                    query.Parameters.AddWithValue("@end", end);
+
+                    Console.WriteLine("dates: " + start);
+
+                    Console.WriteLine("query:" + query.CommandText);
+                    using (var reader = query.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            Console.WriteLine("name:" + reader["Name"].ToString());
+
+                            datas.Add(new DP
+                            {
+                                Name = reader["Name"].ToString(),
+                                Value = Convert.ToDouble(reader["value"].ToString()),
+                                Datetime = Convert.ToDateTime(reader["Time"].ToString())
+
+                            });
+
+
+                        }
+
+
+                    }
+
+                }
+
+                return Ok(datas);
+            }
+            catch (Exception ex) {
+
+                _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
+                throw;
+            }
+          
+        }
+
     }
 }

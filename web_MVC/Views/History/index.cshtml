@@ -291,6 +291,7 @@
             }
            
             async  function renderEventTable(tools,datetime) {
+                
                 var response = await fetch(`/api/Api/GetEvent?table=di_schemas.powerevent&name=${tools}&time=${datetime}`);
                 const data = await response.json();
 
