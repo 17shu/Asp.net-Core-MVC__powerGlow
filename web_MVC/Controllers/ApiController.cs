@@ -273,7 +273,7 @@ namespace web_MVC.Controllers
                 {
                     con.Open();
                     var query = new MySqlCommand($@"
-                        SELECT DISTINCT
+                       SELECT 
                             t1.Name AS Name,
                             t1.Value AS max_value,
                             t1.Datetime AS time
@@ -283,7 +283,7 @@ namespace web_MVC.Controllers
                             SELECT 
                                 Name,
                                 DATE(Datetime) AS date,
-                                MAX(Value) AS max_value
+                                MAX(CAST(Value AS DOUBLE)) AS max_value  -- 將 Value 轉換為 DOUBLE
                             FROM
                                 di_schemas.powerdata_dmpower
                             WHERE
@@ -294,13 +294,14 @@ namespace web_MVC.Controllers
                                 DATE(Datetime)
                         ) t2 ON t1.Name = t2.Name 
                            AND DATE(t1.Datetime) = t2.date
-                           AND t1.Value = t2.max_value
+                           AND CAST(t1.Value AS DOUBLE) = t2.max_value  -- 確保比較的是數值
                         WHERE
                             t1.Name = @Name
-                        Group by 
-                        Date(Datetime)
+                        GROUP BY 
+                            DATE(t1.Datetime)
                         ORDER BY
-                            t1.Datetime;", con);
+                            t1.Datetime;
+                        ;", con);
                     query.Parameters.AddWithValue("@DateS", dateS.ToString("yyyy-MM-dd") + " 00:00:00");
                     query.Parameters.AddWithValue("@DateE", dateE.ToString("yyyy-MM-dd") + " 23:59:59");
                     query.Parameters.AddWithValue("@Name", name + "_Demand_KW");

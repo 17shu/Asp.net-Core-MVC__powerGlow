@@ -38,7 +38,7 @@
 
                 console.log("start:" + start + " /end:" + end);
                 var color = '#47A2F2';
-                var response = await fetch(`/api/Api/Demand?start=${start}&end=${end}`);
+                var response = await fetch(`/api/Api/GetPowerHis?dateS=${start}&dateE=${end}&name=TOTAL`);
                 var DPdata = await response.json();
 
                 console.log('datas: ' + DPdata);
