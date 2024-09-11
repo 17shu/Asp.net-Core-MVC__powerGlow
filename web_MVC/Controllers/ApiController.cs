@@ -7,6 +7,8 @@ using System.Diagnostics.Eventing.Reader;
 using System.Text;
 using System.Xml.Linq;
 using web_MVC.Models;
+using Newtonsoft.Json;
+using Microsoft.VisualBasic;
 
 namespace web_MVC.Controllers
 {
@@ -19,7 +21,7 @@ namespace web_MVC.Controllers
         public ApiController(IConfiguration configuration, ILogger<ApiController> logger)
         {
             _configuration = configuration;
-          
+
             _logger = logger;
         }
 
@@ -40,7 +42,7 @@ namespace web_MVC.Controllers
 
         }
 
-       
+
         private async Task<List<ChartDataModel>> FetchPowerData(int minuteOfDay)
         {
             var powerdata = new List<ChartDataModel>();
@@ -62,7 +64,7 @@ namespace web_MVC.Controllers
 
                     prequery.Parameters.AddWithValue("@MinuteOfDay", minuteOfDay - 1);
                     var previousValues = new Dictionary<string, double>();
-                    using(var reader = prequery.ExecuteReader())
+                    using (var reader = prequery.ExecuteReader())
                     {
                         while (reader.Read())
                         {
@@ -93,9 +95,9 @@ namespace web_MVC.Controllers
                             // 檢查字典中是否已有該名稱的前一個值
                             if (previousValues.ContainsKey(name))
                             {
-                                Console.WriteLine("pre: " + previousValues[name]+" cur: "+currentValue);
+                                //Console.WriteLine("pre: " + previousValues[name] + " cur: " + currentValue);
                                 diff = currentValue - previousValues[name];
-                                Console.WriteLine($"{name} ({diff}).........................");
+                                //  Console.WriteLine($"{name} ({diff}).........................");
                             }
 
                             // 設置顏色
@@ -117,15 +119,15 @@ namespace web_MVC.Controllers
                                 color = color
                             });
 
-                            Console.WriteLine("Diff:  " + diff + "&&&&&&&&&&");
+                            //Console.WriteLine("Diff:  " + diff + "&&&&&&&&&&");
                             // 判斷是否需要呼叫 PostEventRecordAsync
                             if (Math.Abs(diff) >= 0.5)
                             {
-                                Console.WriteLine("Call API***************************");
+                                // Console.WriteLine("Call API***************************");
                                 await PostEventRecordAsync(name.Split('_')[0], Convert.ToDateTime(reader["Datetime"]), diff, "di_schemas.powerevent");
                             }
 
-                            
+
                         }
                     }
                 }
@@ -143,7 +145,7 @@ namespace web_MVC.Controllers
 
         public async Task<IActionResult> GetEnergyData(int minuteOfDay)
         {
-            Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
+            //Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
                 var energyData = await FetchEnergyData(minuteOfDay);
@@ -159,10 +161,10 @@ namespace web_MVC.Controllers
 
         private async Task<List<ChartDataModel>> FetchEnergyData(int minuteOfDay)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!" + minuteOfDay);
+            //Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!" + minuteOfDay);
             var energyData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            Console.WriteLine(connectionString);
+            //Console.WriteLine(connectionString);
             try
             {
                 using (var con = new MySqlConnection(connectionString))
@@ -263,10 +265,10 @@ namespace web_MVC.Controllers
 
         private List<ChartDataModel> FetchPowerHisData(DateTime dateS, DateTime dateE, string name)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!");
+            // Console.WriteLine("fetch!!!!!!!!!!!!!!!!!!!!!!!!!");
             var powerdata = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            Console.WriteLine(connectionString);
+            // Console.WriteLine(connectionString);
             try
             {
                 using (var con = new MySqlConnection(connectionString))
@@ -306,7 +308,7 @@ namespace web_MVC.Controllers
                     query.Parameters.AddWithValue("@DateE", dateE.ToString("yyyy-MM-dd") + " 23:59:59");
                     query.Parameters.AddWithValue("@Name", name + "_Demand_KW");
 
-                    Console.WriteLine(query.CommandText+ dateS.ToString("yyyy-MM-dd") + " 00:00:00       "+  dateE.ToString("yyyy-MM-dd") + " 23:59:59     "+name+"Demand_Kw");
+                    // Console.WriteLine(query.CommandText + dateS.ToString("yyyy-MM-dd") + " 00:00:00       " + dateE.ToString("yyyy-MM-dd") + " 23:59:59     " + name + "Demand_Kw");
 
                     using (var reader = query.ExecuteReader())
                     {
@@ -352,10 +354,10 @@ namespace web_MVC.Controllers
 
         private List<ChartDataModel> FetchEnergyHisData(DateTime dateS, DateTime dateE, string name)
         {
-            Console.WriteLine("fetch!!!!!!!!!!!!" + name);
+            // Console.WriteLine("fetch!!!!!!!!!!!!" + name);
             var energyData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            Console.WriteLine(connectionString);
+            //  Console.WriteLine(connectionString);
             try
             {
                 using (var con = new MySqlConnection(connectionString))
@@ -406,7 +408,7 @@ namespace web_MVC.Controllers
         {
             try
             {
-                var powerData =await FetchPowerHistoryData(date, name);
+                var powerData = await FetchPowerHistoryData(date, name);
                 return Ok(powerData);
             }
             catch (Exception ex)
@@ -426,7 +428,7 @@ namespace web_MVC.Controllers
             {
                 using (var con = new MySqlConnection(connectionString))
                 {
-                   await con.OpenAsync();
+                    await con.OpenAsync();
 
                     // 構建 Name 列表的佔位符
 
@@ -472,7 +474,7 @@ namespace web_MVC.Controllers
                                 Value = Convert.ToDouble(reader["Value"]),
                                 Datetime = reader["Datetime"].ToString(),
                                 Diff = diff,
-                                color=color
+                                color = color
                             });
                             //if (Math.Abs(diff) >= 0.5)
                             //{
@@ -481,7 +483,7 @@ namespace web_MVC.Controllers
                             //}
 
                         }
-                        
+
                     }
                 }
             }
@@ -499,7 +501,7 @@ namespace web_MVC.Controllers
 
         public async Task<IActionResult> GetEnergyHistory(DateTime date, string name)
         {
-            Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
+            // Console.WriteLine("API!!!!!!!!!!!!!!!!!!");
             try
             {
                 var energyData = await FetchEnergyHistory(date, name);
@@ -517,7 +519,7 @@ namespace web_MVC.Controllers
         {
             var energyData = new List<ChartDataModel>();
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            Console.WriteLine(connectionString);
+            // Console.WriteLine(connectionString);
 
             try
             {
@@ -549,7 +551,7 @@ namespace web_MVC.Controllers
 
                     query.Parameters.AddWithValue("@Date", date.ToString("yyyy-MM-dd"));
 
-                
+
                     var previousValues = new Dictionary<string, double>();
 
                     using (var reader = await query.ExecuteReaderAsync())
@@ -559,7 +561,7 @@ namespace web_MVC.Controllers
                             string currentName = reader["Name"].ToString();
                             double currentValue = Convert.ToDouble(reader["diff"]);
                             double currentDiff;
-                            string color="";
+                            string color = "";
 
                             // 檢查字典中是否已存在該名稱的前一個值
                             if (previousValues.ContainsKey(currentName))
@@ -572,8 +574,8 @@ namespace web_MVC.Controllers
                                 currentDiff = 0;
                             }
 
-                            if(currentDiff >= 0.5) { color = "#FF0000"; }
-                            else if(currentDiff<= -0.5) { color = "#0066CC"; }
+                            if (currentDiff >= 0.5) { color = "#FF0000"; }
+                            else if (currentDiff <= -0.5) { color = "#0066CC"; }
                             else { color = ""; }
                             energyData.Add(new ChartDataModel
                             {
@@ -599,32 +601,32 @@ namespace web_MVC.Controllers
                 _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
                 throw;
             }
-            Console.WriteLine("?????????"+energyData.Count);
+            // Console.WriteLine("?????????" + energyData.Count);
             return energyData;
         }
 
 
         [HttpPost("eventRecord")]
-        public async  void EventRecord(string name,DateTime time,double value, string table)
+        public async void EventRecord(string name, DateTime time, double value, string table)
         {
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
             using (var con = new MySqlConnection(connectionString))
             {
-               await con.OpenAsync();
-                    var query = new MySqlCommand($@"
+                await con.OpenAsync();
+                var query = new MySqlCommand($@"
                     INSERT ignore INTO {table}
                     (Name, Time, Value)
                     VALUES
                     (@Name, @Time, @Value);", con);
 
-                    query.Parameters.AddWithValue("@Name", name);
-                    query.Parameters.AddWithValue("@Time", time);
-                    query.Parameters.AddWithValue("@Value", value);
+                query.Parameters.AddWithValue("@Name", name);
+                query.Parameters.AddWithValue("@Time", time);
+                query.Parameters.AddWithValue("@Value", value);
 
 
-                    var rowsAffected = await query.ExecuteNonQueryAsync();
-                    _logger.LogInformation($"Rows affected: {rowsAffected}");
-                
+                var rowsAffected = await query.ExecuteNonQueryAsync();
+                _logger.LogInformation($"Rows affected: {rowsAffected}");
+
             }
         }
 
@@ -645,17 +647,18 @@ namespace web_MVC.Controllers
                 if (!response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Response: {responseContent}");
+                    // Console.WriteLine($"Response: {responseContent}");
                 }
-                else {
-                    Console.WriteLine($"Response: success!");
+                else
+                {
+                    // Console.WriteLine($"Response: success!");
                 }
             }
         }
-        
+
         [HttpGet("GetEvent")]
 
-        public IActionResult GetEvent(string table,DateTime time,string name)
+        public IActionResult GetEvent(string table, DateTime time, string name)
         {
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
             var eventData = new List<ChartDataModel>();
@@ -675,7 +678,7 @@ namespace web_MVC.Controllers
                     Name,Time,Value desc,Name;", con);
 
 
-                    Console.WriteLine(query.CommandText);
+                    //Console.WriteLine(query.CommandText);
                     query.Parameters.AddWithValue("@name", name);
                     if (time.TimeOfDay != new TimeSpan(0, 0, 0))
                     {
@@ -683,11 +686,11 @@ namespace web_MVC.Controllers
                     }
                     else
                     {
-                        query.Parameters.AddWithValue("@date", time.ToString("yyyy-MM-dd")+'%');
+                        query.Parameters.AddWithValue("@date", time.ToString("yyyy-MM-dd") + '%');
                     }
-                    
 
-                  
+
+
 
                     using (var reader = query.ExecuteReader())
                     {
@@ -702,7 +705,7 @@ namespace web_MVC.Controllers
                             });
 
                         }
-                        Console.WriteLine(eventData.Count + "??????????");
+                        //Console.WriteLine(eventData.Count + "??????????");
                     }
 
 
@@ -739,20 +742,20 @@ namespace web_MVC.Controllers
                 query.Parameters.AddWithValue("@name", name);
                 query.ExecuteNonQuery();
                 var c_id = 0;
-                query = new MySqlCommand(@"SELECT c_id FROM di_schemas.company WHERE Name = @name;",con);
+                query = new MySqlCommand(@"SELECT c_id FROM di_schemas.company WHERE Name = @name;", con);
                 query.Parameters.AddWithValue("@name", name);
                 using (var reader = query.ExecuteReader())
                 {
-                    while (reader.Read()) {  c_id = Convert.ToInt32(reader["c_id"]);}
-                   
+                    while (reader.Read()) { c_id = Convert.ToInt32(reader["c_id"]); }
+
                 }
 
                 query = new MySqlCommand(@"SELECT COUNT(*) as c FROM di_schemas.users WHERE Email = @Email;", con);
-                query.Parameters.AddWithValue("@Email",email);
+                query.Parameters.AddWithValue("@Email", email);
 
-                using(var reader = query.ExecuteReader())
+                using (var reader = query.ExecuteReader())
                 {
-                    
+
                     while (reader.Read())
                     {
                         var count = Convert.ToInt32(reader["c"]);
@@ -772,10 +775,10 @@ namespace web_MVC.Controllers
                 query.Parameters.AddWithValue("@Pw", pw);
 
 
-          
 
-               
-                Console.WriteLine(query.CommandText);
+
+
+                //Console.WriteLine(query.CommandText);
                 var rowsAffected = query.ExecuteNonQuery();
                 _logger.LogInformation($"Rows affected: {rowsAffected}");
 
@@ -789,23 +792,26 @@ namespace web_MVC.Controllers
             var name = data["name"];
             var pw = data["pw"];
             var connectionString = _configuration.GetConnectionString("MySqlConnection");
-            using (var con = new MySqlConnection(connectionString)) { 
-            
+            using (var con = new MySqlConnection(connectionString))
+            {
+
                 con.Open();
                 var query = new MySqlCommand(@"
                 select count(*) as c from di_schemas.users where Company = @name or Email = @name", con);
                 query.Parameters.AddWithValue("@name", name);
 
-                Console.WriteLine("query: "+query.CommandText+"  name:"+name );
+                // Console.WriteLine("query: " + query.CommandText + "  name:" + name);
                 using (var reader = query.ExecuteReader())
                 {
                     var count = 0;
-                    while (reader.Read()) { 
+                    while (reader.Read())
+                    {
                         count = Convert.ToInt32(reader["c"]);
-                        Console.WriteLine("count:"+count);
+                        //Console.WriteLine("count:" + count);
                     }
-                   
-                    if (count > 0) {
+
+                    if (count > 0)
+                    {
                         query = new MySqlCommand(@"select count(*) as c from di_schemas.users where Password = @pw", con);
                         query.Parameters.AddWithValue("@pw", pw);
                         reader.Close();
@@ -815,7 +821,8 @@ namespace web_MVC.Controllers
                             {
                                 count = Convert.ToInt32(reader2["c"]);
                             }
-                            if (count > 0) {
+                            if (count > 0)
+                            {
                                 return Ok();
                             }
                             else
@@ -827,12 +834,12 @@ namespace web_MVC.Controllers
                     }
                     else
                     {
-                        return BadRequest(new { message = "the account doesn't exist"});
+                        return BadRequest(new { message = "the account doesn't exist" });
                     }
                 }
-            
-            
-            
+
+
+
             }
 
         }
@@ -849,19 +856,19 @@ namespace web_MVC.Controllers
                 using (var con = new MySqlConnection(connectionString))
                 {
                     con.Open();
-                    var query = new MySqlCommand(@"select Max(Value) as value,Name,Time from di_schemas.powerevent where Date(Time) between @start and @end and Time(Time) between '02:00:00' and '23:59:00' and Name = 'TOTAL' Group by Date(Time);
+                    var query = new MySqlCommand(@"select Max(Value) as value,Name,Time from di_schemas.powerevent where Date(Time) = @start and Time(Time) between '00:00:00' and '23:59:00' and Name = 'TOTAL' Group by Date(Time);
                 ", con);
                     query.Parameters.AddWithValue("@start", start);
                     query.Parameters.AddWithValue("@end", end);
 
-                    Console.WriteLine("dates: " + start);
+                    //  Console.WriteLine("dates: " + start);
 
-                    Console.WriteLine("query:" + query.CommandText);
+                    //   Console.WriteLine("query:" + query.CommandText);
                     using (var reader = query.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            Console.WriteLine("name:" + reader["Name"].ToString());
+                            //  Console.WriteLine("name:" + reader["Name"].ToString());
 
                             datas.Add(new DP
                             {
@@ -881,13 +888,264 @@ namespace web_MVC.Controllers
 
                 return Ok(datas);
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
 
                 _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
                 throw;
             }
-          
+
+        }
+
+
+        [HttpPost("OptimizePowerData")]
+        public IActionResult OptimizePowerData([FromBody] OptimizeRequest request)
+        {
+            try
+            {
+                // 調試信息
+                Console.WriteLine($"Received ToolShiftRanges: {JsonConvert.SerializeObject(request.ToolShiftRanges)}");
+
+                // 檢查數據是否正確
+                if (request.ToolData == null || !request.ToolData.Any() || request.ToolShiftRanges == null)
+                {
+                    return BadRequest("Tool data or shift ranges are missing.");
+                }
+
+                // 按工具名稱分組數據
+                var toolDataDict = request.ToolData.GroupBy(d => d.Name)
+                                                   .ToDictionary(g => g.Key, g => g.ToList());
+
+                var finalShifts = new Dictionary<string, int>();
+
+                // 檢查每個工具的移動範圍
+                foreach (var toolDataGroup in toolDataDict)
+                {
+                    string toolName = toolDataGroup.Key;
+
+                    if (!request.ToolShiftRanges.ContainsKey(toolName))
+                    {
+                        return BadRequest($"No shift range provided for tool: {toolName}");
+                    }
+
+                    var shiftRange = request.ToolShiftRanges[toolName];
+
+                    // 優化工具數據並獲取最終移動的範圍
+                    int finalShift = SimulatedAnnealingWithShift(toolDataGroup.Value, shiftRange.Early, shiftRange.Later);
+
+                    // 儲存該工具的最終移動範圍
+                    finalShifts[toolName] = finalShift;
+
+                    // 顯示提示信息
+                    Console.WriteLine($"Tool: {toolName}, Range: early={shiftRange.Early}, later={shiftRange.Later}, Final Shift: {finalShift} minutes.");
+                }
+
+                // 創建 ShiftRequest 並調用 ShiftData
+                var shiftRequest = new ShiftRequest
+                {
+                    OriginalData = request.ToolData,
+                    NameShiftMap = finalShifts
+                };
+
+                var shiftedData = ShiftData(shiftRequest);
+
+                // 返回優化後的數據
+                return Ok(shiftedData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred while optimizing power data: {ex.Message}", ex);
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        public List<ChartDataModel> ShiftData(ShiftRequest request)
+        {
+            // Step 1: 按 Name 分組數據，並將連續的 Datetime 的數據進行合併
+            var groupedData = request.OriginalData
+                                     .GroupBy(d => d.Name)  // 按 Name 分組
+                                     .ToDictionary(g => g.Key, g =>
+                                         g.GroupBy(item => item.Datetime) // 先按 Datetime 分組
+                                          .Select(group => new ChartDataModel
+                                          {
+                                              Name = group.First().Name,          // 保留 Name
+                                              Datetime = group.Key,               // 保留 Datetime (string)
+                                              Value = group.Sum(item => item.Value) // 同一時間點的 Value 相加
+                                          }).ToList()  // 按原始順序放入列表
+                                     );
+
+            // Console 輸出 groupedData，並且按時間排序
+            foreach (var tool in groupedData)
+            {
+                Console.WriteLine($"Tool Name: {tool.Key}");
+
+                // 先將時間字串轉換為 DateTime 再排序
+                var sortedToolData = tool.Value.OrderBy(data =>
+                {
+                    // 使用 DateTime.TryParse 轉換
+                    DateTime parsedDatetime;
+                    if (DateTime.TryParse(data.Datetime, out parsedDatetime))
+                    {
+                        return parsedDatetime;
+                    }
+                    else
+                    {
+                        return DateTime.MinValue; // 如果解析失敗，回傳最小值
+                    }
+                }).ToList();
+
+
+            }
+
+            var shiftedData = new List<ChartDataModel>();
+
+            // Step 2: 遍歷每一個工具的數據
+            foreach (var group in groupedData)
+            {
+                string toolName = group.Key;
+                List<ChartDataModel> toolData = group.Value;  // 經過合併後的數據
+
+                // 檢查該工具是否有移動量
+                if (!request.NameShiftMap.ContainsKey(toolName))
+                {
+                    // 沒有移動量，直接添加該工具的數據到最終結果
+                    shiftedData.AddRange(toolData);
+                    continue;
+                }
+
+                // Step 3: 對每個工具的數據進行分鐘位移處理
+                int shiftMinutes = request.NameShiftMap[toolName];
+
+                // 生成一個新列表來儲存移動後的數據
+                var newToolData = new List<ChartDataModel>();
+
+                foreach (var currentItem in toolData)
+                {
+                    // 嘗試將 Datetime 轉換為 DateTime
+                    if (DateTime.TryParse(currentItem.Datetime, out DateTime parsedDatetime))
+                    {
+                        // 移動後的數據設置
+                        var shiftedItem = new ChartDataModel
+                        {
+                            Name = currentItem.Name,
+                            Datetime = parsedDatetime.AddMinutes(shiftMinutes).ToString("yyyy-MM-dd HH:mm:ss"), // 調整後轉回 string
+                            Value = currentItem.Value  // 保留移動前的數據值
+                        };
+                        newToolData.Add(shiftedItem);
+                    }
+                    else
+                    {
+                        // 若 Datetime 無法解析，保持原數據不變
+                        newToolData.Add(currentItem);
+                    }
+                }
+
+                // 將移動後的數據加入最終結果
+                shiftedData.AddRange(newToolData);
+            }
+
+            // 返回移動後的新數據列表
+            return shiftedData;
+        }
+
+
+
+
+
+
+        // 退火演算法，返回最終移動的範圍
+        private int SimulatedAnnealingWithShift(List<ChartDataModel> toolData, int windowBefore, int windowAfter)
+        {
+            Random random = new Random();
+            int dataLength = toolData.Count;
+
+            double currentMax = toolData.Max(t => t.Value);
+            double currentTemperature = 1000.0;
+            int finalShift = 0;  // 用來追踪最終的移動範圍
+
+            while (currentTemperature > 0.01)
+            {
+                // 隨機決定位移量
+                int shiftMinutes = random.Next(windowBefore, windowAfter + 1);
+
+                // 複製當前數據並進行移動
+                var newToolData = toolData.Select(d => new ChartDataModel
+                {
+                    Name = d.Name,
+                    Datetime = d.Datetime,
+                    Value = d.Value
+                }).ToList();
+
+                ShiftToolData(newToolData, shiftMinutes);
+
+                double newMax = newToolData.Max(t => t.Value);
+
+                // 根據退火機制接受或拒絕新的解
+                if (newMax < currentMax || Math.Exp((currentMax - newMax) / currentTemperature) > random.NextDouble())
+                {
+                    toolData = newToolData;
+                    currentMax = newMax;
+                    finalShift = shiftMinutes;  // 更新最終移動範圍
+                }
+
+                // 降低溫度
+                currentTemperature *= 0.95;
+            }
+
+            return finalShift;  // 返回最終移動的範圍
+        }
+
+        // 將工具數據進行位移
+        private void ShiftToolData(List<ChartDataModel> toolData, int shiftMinutes)
+        {
+            int len = toolData.Count;
+            var shiftedData = new List<ChartDataModel>(toolData);
+
+            for (int i = 0; i < len; i++)
+            {
+                int newIndex = i + shiftMinutes;
+
+                // 確保 newIndex 在合法範圍內，處理負數情況
+                if (newIndex >= 0 && newIndex < len)
+                {
+                    shiftedData[newIndex].Value = toolData[i].Value;
+                }
+                else if (newIndex < 0)
+                {
+                    // 將超出範圍的數據放到列表尾部
+                    shiftedData[len + newIndex].Value = toolData[i].Value;
+                }
+            }
+
+            // 替換為移動後的數據
+            for (int i = 0; i < len; i++)
+            {
+                toolData[i].Value = shiftedData[i].Value;
+            }
         }
 
     }
 }
+    public class ShiftRange
+    {
+        public int Early { get; set; }
+        public int Later { get; set; }
+    }
+
+    public class OptimizeRequest
+    {
+        public List<ChartDataModel> ToolData { get; set; }
+        public Dictionary<string, ShiftRange> ToolShiftRanges { get; set; }
+    }
+
+    // 移動數據請求模型
+    public class ShiftRequest
+    {
+        public List<ChartDataModel> OriginalData { get; set; }
+        public Dictionary<string, int> NameShiftMap { get; set; }
+    }
+
+
+
+
+
+
