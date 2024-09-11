@@ -182,5 +182,23 @@ body {
     justify-content:center;
 }
 
-
+.blockStyle {
+    display: inline-flex;
+    gap: 25px;
+    height: auto;
+    width: 100%;
+    padding: 15px;
+    background-color: #ECF5FF;
+    justify-content: center;
+    align-items: center;
+}
+.whiteBlock {
+    display: inline-flex;
+    gap: 25px;
+    height: auto;
+    width: 100%;
+    padding: 15px;
+    justify-content: center;
+    align-items: center;
+}
 
