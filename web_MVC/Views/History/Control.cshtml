@@ -1,4 +1,4 @@
-﻿
+﻿@model web_MVC.Models.ChartViewModel;
 <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -8,17 +8,40 @@
     <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
     <h2>History Control</h2>
 </div>
-<div id ="DateS">
-    <p class="fontStyle" >Start Date :</p>
-    <input type="date" class="form-control dateStyle"  name="date" />
+<div class="formStyle">
+    <div id="DateS">
+        <p class="fontStyle">Start Date :</p>
+        <input type="date" class="form-control dateStyle" name="date" />
+    </div>
+    <div id="DateE">
+        <p class="fontStyle">End Date :</p>
+        <input type="date" class="form-control dateStyle" name="date" />
+    </div>
+
+    <button id="btn"> search </button>
 </div>
-<div id ="DateE">
-    <p class="fontStyle" >End Date :</p>
-    <input type="date" class="form-control dateStyle" name="date" />
+<div id="dpShow">
+    <div id="loadDiv" style="display:none">
+        @await Html.PartialAsync("_Loading")
+    </div>
+
+    <div id="DPchart"></div>    
+    <div id="form"></div>
+    <button style="display:none">Analyze</button>
+</div>
+<div id="loadDiv2" style="display:none">
+    @await Html.PartialAsync("_Loading")
+</div>
+<div id="allpower">
+
+    <div id="AllPowerChart"></div>
+    <div id="powerChart"></div>
+</div>
+<div id="powers">
+    <div id="AllPowerChart_moved"></div>
+    <div id="powerChart_moved"></div>
 </div>
 
-<button id="btn"> search </button>
-<div id="DPchart"></div>
 
 
 @section scripts{
@@ -26,13 +49,181 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
-
+        const tools = ["TOOL1", "TOOL2", "TOOL3", "TOOL5", "TOOL6", "TOOL7", "TOOL8", "TOOL9", "TOOL10",
+            "TOOL11", "TOOL12", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
+            "TOOL19", "TOOL20", "AIRCOM"];
+        var datas = null;
+        var data_no = null;
         $(document).ready(function () {
+
+            $('#DPchart').width(850);
+            $('#powerChart').width(650);
+            $('#AllPowerChart').width(900);
+            $('#powerChart_moved').width(650);
+            $('#AllPowerChart_moved').width(900);
+
             $('#btn').on('click', function (event) {
                 showDPchart();
+                $("#dpShow").addClass('blockStyle');
             });
+            //
+            $('#dpShow button').on('click', function (event) {
+                analyzeDP();
+            })
+            //
+            async function showForm(date) {
+                $('#form').empty();
+                $('#dpShow button').show();
+                const columns = ['early', 'later', 'best'];
+                const rows = tools;
 
+                // 清空 #form div 的內容
+                $('#form').empty();
+
+                // 創建表格
+                const table = $('<table></table>').attr({ border: '1', width: '100%' }).css('text-align', 'center');
+
+                // 創建表頭 (Header row)
+                const thead = $('<thead></thead>');
+                const headerRow = $('<tr></tr>');
+
+                // 空白單元格 (為了對齊行標題和列標題)
+                const emptyHeader = $('<th></th>').text('');  // 可以填充空白內容
+                headerRow.append(emptyHeader);
+
+                // 添加列標題並設置寬度為 8px
+                columns.forEach(col => {
+                    const th = $('<th></th>').text(col).css({ width: '8px' });  // 設置寬度為 8px
+                    headerRow.append(th);
+                });
+                thead.append(headerRow);
+                table.append(thead);
+
+                // 創建表格內容
+                const tbody = $('<tbody></tbody>');
+                rows.forEach(row => {
+                    const tr = $('<tr></tr>');
+
+                    // 行標題
+                    const rowHeader = $('<th></th>').text(row).css({ width: '8px' });  // 設置寬度為 8px
+                    tr.append(rowHeader);
+
+                    // 為每個工具創建對應的輸入框，並設置不同的預設值和狀態
+                    columns.forEach(col => {
+                        const td = $('<td></td>').css({ width: '8px' });
+                        let input;
+
+                        // 根據列名設置不同的預設值和狀態
+                        if (col === 'early') {
+                            input = $('<input></input>').attr({
+                                type: 'text',
+                                name: `${row}-${col}`,
+                                value: '-5'  // early 填入 -5
+                            }).css({ width: '100%' });
+                        } else if (col === 'later') {
+                            input = $('<input></input>').attr({
+                                type: 'text',
+                                name: `${row}-${col}`,
+                                value: '10'  // later 填入 5
+                            }).css({ width: '100%' });
+                        } else if (col === 'best') {
+                            input = $('<input></input>').attr({
+                                type: 'text',
+                                name: `${row}-${col}`,
+                                disabled: true  // best 保持空白並禁用
+                            }).css({ width: '100%' });
+                        }
+
+                        td.append(input);
+                        tr.append(td);
+                    });
+
+                    tbody.append(tr);
+                });
+
+                table.append(tbody);
+
+                // 使用 jQuery 將表格加入到 #form div 中
+                $('#form').append(table);
+            }
+
+            //
+
+            function getRowValues(rowNames) {
+                var toolShiftRanges = {};
+
+                // 遍歷工具名稱的數組
+                rowNames.forEach(function (rowName) {
+                    // 選擇該行的 early 和 later 列的輸入框
+                    var earlyValue = $(`input[name='${rowName}-early']`).val();  // early 列的值
+                    var laterValue = $(`input[name='${rowName}-later']`).val();  // later 列的值
+
+                    // 將 early 和 later 值轉換為數字並存儲到對應的 toolShiftRanges 中
+                    toolShiftRanges[rowName] = {
+                        early: parseInt(earlyValue, 10),  // 確保轉換為整數
+                        later: parseInt(laterValue, 10)   // 確保轉換為整數
+                    };
+                });
+
+                return toolShiftRanges;
+            }
+            //
+            function countTotal(data) {
+                // 創建一個物件來存儲相同時間點的總和
+                const totalByDatetime = {};
+
+                // 遍歷數據，按照 datetime 分組並累加 value
+                data.forEach(item => {
+                    if (!totalByDatetime[item.datetime]) {
+                        totalByDatetime[item.datetime] = 0;  // 如果尚不存在該時間點，初始化為 0
+                    }
+                    totalByDatetime[item.datetime] += item.value;  // 累加 value
+                });
+
+                // 將 TOTAL 加入 data 中
+                for (const [datetime, totalValue] of Object.entries(totalByDatetime)) {
+                    data.push({
+                        datetime: datetime,
+                        value: totalValue,
+                        name: "TOTAL"
+                    });
+                }
+
+                renderChart(data, 'AllPowerChart_moved');
+            }
+            //
+            function analyzeDP() {
+
+                var toolShiftRanges = getRowValues(tools);
+                console.log('range:' + JSON.stringify(toolShiftRanges));
+                fetch('/api/Api/OptimizePowerData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ToolData: data_no,
+                        ToolShiftRanges: toolShiftRanges
+                    })
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        console.log('Optimized Data:', result);
+                        renderChart(result, 'powerChart_moved');
+                        countTotal(result);
+
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+
+            //
             async function showDPchart() {
+                $('#DPchart').empty();
+                $("#loadDiv").show();
+
                 var start = $('#DateS input').val();
                 var end = $('#DateE input').val();
 
@@ -40,6 +231,11 @@
                 var color = '#47A2F2';
                 var response = await fetch(`/api/Api/GetPowerHis?dateS=${start}&dateE=${end}&name=TOTAL`);
                 var DPdata = await response.json();
+
+                if (!DPdata || DPdata.length === 0) {
+                    console.error("No data available for the selected date range.");
+                    return;
+                }
 
                 console.log('datas: ' + DPdata);
 
@@ -78,8 +274,9 @@
 
                 var ctx = document.createElement('canvas');
                 $('#DPchart').empty().append(ctx); // 清除舊的圖表，插入新的
+                $("#loadDiv").hide();
 
-                new Chart(ctx, {
+                var myChart = new Chart(ctx, {
                     type: 'scatter',
                     data: {
                         labels: Labels, // 使用格式化的日期作為 X 軸標籤
@@ -111,12 +308,177 @@
                                     }
                                 }
                             }
+                        },
+                        onClick: async (event) => {
+                            // 獲取被點擊的元素
+                            const points = myChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                            if (points.length) {
+                                // 獲取點擊的數據集索引和數據索引
+                                const firstPoint = points[0];
+                                const time = myChart.data.labels[firstPoint.index];
+                                const value = myChart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
+
+                                console.log(`點擊的 X 軸值: ${time}`);
+                                console.log(`對應的 Y 軸值: ${value.y}`);
+                                showForm(time);
+                                await showAllPowerChart(time);
+                                await showPowerChart(time);
+                            }
                         }
                     }
                 });
             }
-        });
+            //
+            async function showAllPowerChart(date) {
+                $('#AllPowerChart').empty();
+                $('#allpower').addClass('whiteBlock');
+                $("#loadDiv2").show();
+                var toolOption = ["TOTAL", "TOOL1", "TOOL2", "TOOL3", "TOOL5", "TOOL6", "TOOL7", "TOOL8", "TOOL9", "TOOL10",
+                    "TOOL11", "TOOL12", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
+                    "TOOL19", "TOOL20", "AIRCOM"];
+                var selectedTools = toolOption.map(option => `'${option}_Demand_KW'`);
+                var tools_p = selectedTools.join(",");
+                var power = await fetch(`/api/Api/GetPowerHistory?date=${date}&name=${tools_p}`);
+                var powerData = await power.json();
+                datas = powerData;
+                if (!powerData || powerData.length === 0) {
+                    console.error("No power data available.");
+                    return;
+                }
 
+                renderChart(powerData, 'AllPowerChart');
+                $("#loadDiv2").hide();
+            }
+            async function showPowerChart(date) {
+                $('#powerChart').empty();
+                $('#powers').addClass('blockStyle');
+                var toolOption = ["TOOL1", "TOOL2", "TOOL3", "TOOL5", "TOOL6", "TOOL7", "TOOL8", "TOOL9", "TOOL10",
+                    "TOOL11", "TOOL12", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
+                    "TOOL19", "TOOL20", "AIRCOM"];
+                var selectedTools = toolOption.map(option => `'${option}_Demand_KW'`);
+                var tools_p = selectedTools.join(",");
+                var power = await fetch(`/api/Api/GetPowerHistory?date=${date}&name=${tools_p}`);
+                var powerData = await power.json();
+                data_no = powerData;
+
+                if (!powerData || powerData.length === 0) {
+                    console.error("No power data available.");
+                    return;
+                }
+
+                renderChart(powerData, 'powerChart');
+            }
+            //
+            // 固定顏色映射表，將每個工具名稱與固定顏色對應
+            const colorMap = {
+                "TOTAL": "#7AFEC6",
+                "TOOL1": "#FFE153",
+                "TOOL2": "#B7FF4A",
+                "TOOL3": "#C4C400",
+                "TOOL5": "#A5A552",
+                "TOOL6": "#FFD1A4",
+                "TOOL7": "#01814A",
+                "TOOL8": "#5B5B5B",
+                "TOOL9": "#EAC100",
+                "TOOL10": "#B8B8DC",
+                "TOOL11": "#5E005E",
+                "TOOL12": "#007500",
+                "TOOL13": "#AE57A4",
+                "TOOL14": "#8CEA00",
+                "TOOL15": "#FFFF6F",
+                "TOOL16": "#FFC1E0",
+                "TOOL17": "#C4C400",
+                "TOOL18": "#842B00",
+                "TOOL19": "#CF9E9E",
+                "TOOL20": "#5CADAD",
+                "AIRCOM": "#252525"
+            };
+
+
+            // 修改 getRandomColor 來使用 colorMap
+            function getToolColor(toolName) {
+                return colorMap[toolName] || "#000000"; // 如果沒有找到對應的顏色，預設使用黑色
+            }
+
+            async function renderChart(data, id) {
+                var container = document.getElementById(id);
+                container.innerHTML = ''; // 清空已有的 canvas 元素
+
+                console.log("Rendering chart...");
+                var Labels = [];
+                var datasets = [];
+                var minDate = data[0].datetime;
+                var maxDate = data[data.length - 1].datetime;
+
+                data.forEach(function (item) {
+                    if (!Labels.includes(item.datetime)) {
+                        Labels.push(item.datetime);
+                    }
+
+                    var dataset = datasets.find(d => d.label === item.name);
+                    if (!dataset) {
+                        var toolColor = getToolColor(item.name); // 使用固定的工具顏色
+                        dataset = {
+                            label: item.name,
+                            data: [],
+                            borderColor: toolColor,
+                            backgroundColor: toolColor,
+                            fill: false,
+                            pointBackgroundColor: [],
+                            pointBorderColor: [],
+                            pointRadius: [],
+                            diff: []
+                        };
+                        datasets.push(dataset);
+                    }
+
+                    // 添加數據到數據集
+                    dataset.data.push({ x: item.datetime, y: item.value });
+                    dataset.pointBackgroundColor.push(getToolColor(item.name)); // 保持工具的顏色一致
+                    dataset.pointBorderColor.push(getToolColor(item.name));
+                    dataset.pointRadius.push(0.5);
+                    dataset.diff.push(item.diff);
+                });
+
+                var ctx = document.createElement('canvas');
+                container.appendChild(ctx);
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                min: minDate,
+                                max: maxDate,
+                                beginAtZero: true
+                            },
+                            y: {
+                                beginAtZero: true,
+                            },
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        var label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.raw.y;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+        });
 
     </script>
 }
