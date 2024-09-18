@@ -209,8 +209,8 @@
                     .then(response => response.json())
                     .then(result => {
                         console.log('Optimized Data:', result);
-                        renderChart(result, 'powerChart_moved');
-                        countTotal(result);
+                        renderChart(result.shiftedData, 'powerChart_moved');
+                        countTotal(result.shiftedData);
 
                     })
                     .catch(error => {

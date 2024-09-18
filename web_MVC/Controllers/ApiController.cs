@@ -958,7 +958,7 @@ namespace web_MVC.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-        public List<ChartDataModel> ShiftData(ShiftRequest request)
+        public ShiftedDataResult ShiftData(ShiftRequest request)
         {
             // Step 1: 按 Name 分組數據，並將連續的 Datetime 的數據進行合併
             var groupedData = request.OriginalData
@@ -973,30 +973,8 @@ namespace web_MVC.Controllers
                                           }).ToList()  // 按原始順序放入列表
                                      );
 
-            // Console 輸出 groupedData，並且按時間排序
-            foreach (var tool in groupedData)
-            {
-                Console.WriteLine($"Tool Name: {tool.Key}");
-
-                // 先將時間字串轉換為 DateTime 再排序
-                var sortedToolData = tool.Value.OrderBy(data =>
-                {
-                    // 使用 DateTime.TryParse 轉換
-                    DateTime parsedDatetime;
-                    if (DateTime.TryParse(data.Datetime, out parsedDatetime))
-                    {
-                        return parsedDatetime;
-                    }
-                    else
-                    {
-                        return DateTime.MinValue; // 如果解析失敗，回傳最小值
-                    }
-                }).ToList();
-
-
-            }
-
             var shiftedData = new List<ChartDataModel>();
+            var shiftedOffsets = new Dictionary<string, int>();  // 儲存每個工具的位移量
 
             // Step 2: 遍歷每一個工具的數據
             foreach (var group in groupedData)
@@ -1009,11 +987,13 @@ namespace web_MVC.Controllers
                 {
                     // 沒有移動量，直接添加該工具的數據到最終結果
                     shiftedData.AddRange(toolData);
+                    shiftedOffsets[toolName] = 0;  // 位移量為 0
                     continue;
                 }
 
                 // Step 3: 對每個工具的數據進行分鐘位移處理
                 int shiftMinutes = request.NameShiftMap[toolName];
+                shiftedOffsets[toolName] = shiftMinutes;  // 保存位移量
 
                 // 生成一個新列表來儲存移動後的數據
                 var newToolData = new List<ChartDataModel>();
@@ -1043,9 +1023,14 @@ namespace web_MVC.Controllers
                 shiftedData.AddRange(newToolData);
             }
 
-            // 返回移動後的新數據列表
-            return shiftedData;
+            // 返回移動後的新數據列表和位移範圍
+            return new ShiftedDataResult
+            {
+                ShiftedData = shiftedData,
+                ShiftedOffsets = shiftedOffsets
+            };
         }
+
 
 
 
