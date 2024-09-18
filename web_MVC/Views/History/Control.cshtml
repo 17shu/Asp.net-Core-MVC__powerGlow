@@ -192,6 +192,16 @@
                 renderChart(data, 'AllPowerChart_moved');
             }
             //
+            function fillBestValues(shiftedOffsets) {
+                // 遍歷每個工具名稱，並將對應的位移值填入到表格中的 best 欄位
+                Object.keys(shiftedOffsets).forEach(toolName => {
+                    const bestValue = shiftedOffsets[toolName] || '';  // 如果沒有對應的位移則為空白
+                    // 查找對應的 input 欄位，並填入 bestValue
+                    $(`input[name='${toolName}-best']`).val(bestValue);
+                });
+            }
+
+            //
             function analyzeDP() {
 
                 var toolShiftRanges = getRowValues(tools);
@@ -211,6 +221,7 @@
                         console.log('Optimized Data:', result);
                         renderChart(result.shiftedData, 'powerChart_moved');
                         countTotal(result.shiftedData);
+                        fillBestValues(result.shiftedOffsets);
 
                     })
                     .catch(error => {
