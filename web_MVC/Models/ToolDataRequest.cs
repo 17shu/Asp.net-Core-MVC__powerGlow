@@ -1,23 +1,30 @@
 ﻿namespace web_MVC.Models
 {
-    public class ToolDataRequest
+    public class ShiftRange
     {
-        public List<ToolModel> ToolData { get; set; }
+        public int Early { get; set; }
+        public int Later { get; set; }
     }
 
-    public class ToolModel
+    public class OptimizeRequest
     {
-        public string ToolName { get; set; }       // 工具名稱，例如 TOOL1, TOOL2
-        public int WindowBefore { get; set; }      // 該工具可向前移動的最大分鐘數
-        public int WindowAfter { get; set; }       // 該工具可向後移動的最大分鐘數
-        public List<DataPointModel> Data { get; set; }  // 工具的數據點，每分鐘一筆
+        public List<ChartDataModel> ToolData { get; set; }
+        public Dictionary<string, ShiftRange> ToolShiftRanges { get; set; }
     }
 
-    public class DataPointModel
+    // 移動數據請求模型
+    public class ShiftRequest
     {
-        public DateTime Timestamp { get; set; }    // 每個數據點的時間戳
-        public double Value { get; set; }          // 每個時間點的數據值
+        public List<ChartDataModel> OriginalData { get; set; }
+        public Dictionary<string, int> NameShiftMap { get; set; }
     }
+
+    public class ShiftedDataResult
+    {
+        public List<ChartDataModel> ShiftedData { get; set; }  // 移動後的數據
+        public Dictionary<string, int> ShiftedOffsets { get; set; }  // 每個工具的位移量
+    }
+
 }
 
 
