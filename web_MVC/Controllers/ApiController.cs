@@ -898,219 +898,200 @@ namespace web_MVC.Controllers
         }
 
 
-        [HttpPost("OptimizePowerData")]
-        public IActionResult OptimizePowerData([FromBody] OptimizeRequest request)
-        {
-            try
+            [HttpPost("OptimizePowerData")]
+            public IActionResult OptimizePowerData([FromBody] OptimizeRequest request)
             {
-                // 調試信息
-                Console.WriteLine($"Received ToolShiftRanges: {JsonConvert.SerializeObject(request.ToolShiftRanges)}");
-
-                // 檢查數據是否正確
-                if (request.ToolData == null || !request.ToolData.Any() || request.ToolShiftRanges == null)
+                // 檢查請求是否有效
+                if (request == null || request.ToolData == null || request.ToolShiftRanges == null)
                 {
-                    return BadRequest("Tool data or shift ranges are missing.");
+                    return BadRequest("Invalid request data.");
                 }
 
-                // 按工具名稱分組數據
-                var toolDataDict = request.ToolData.GroupBy(d => d.Name)
-                                                   .ToDictionary(g => g.Key, g => g.ToList());
+                // 初始化移位數據結果
+                var initialShifts = new List<int>();
+                var minShifts = new List<int>();
+                var maxShifts = new List<int>();
 
-                var finalShifts = new Dictionary<string, int>();
-
-                // 檢查每個工具的移動範圍
-                foreach (var toolDataGroup in toolDataDict)
+                // 設置每個工具的初始、最小和最大移位範圍
+                foreach (var tool in request.ToolData.Select(td => td.Name).Distinct())
                 {
-                    string toolName = toolDataGroup.Key;
-
-                    if (!request.ToolShiftRanges.ContainsKey(toolName))
+                    if (request.ToolShiftRanges.ContainsKey(tool))
                     {
-                        return BadRequest($"No shift range provided for tool: {toolName}");
-                    }
-
-                    var shiftRange = request.ToolShiftRanges[toolName];
-
-                    // 優化工具數據並獲取最終移動的範圍
-                    int finalShift = SimulatedAnnealingWithShift(toolDataGroup.Value, shiftRange.Early, shiftRange.Later);
-
-                    // 儲存該工具的最終移動範圍
-                    finalShifts[toolName] = finalShift;
-
-                    // 顯示提示信息
-                    Console.WriteLine($"Tool: {toolName}, Range: early={shiftRange.Early}, later={shiftRange.Later}, Final Shift: {finalShift} minutes.");
-                }
-
-                // 創建 ShiftRequest 並調用 ShiftData
-                var shiftRequest = new ShiftRequest
-                {
-                    OriginalData = request.ToolData,
-                    NameShiftMap = finalShifts
-                };
-
-                var shiftedData = ShiftData(shiftRequest);
-
-                // 返回優化後的數據
-                return Ok(shiftedData);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"An error occurred while optimizing power data: {ex.Message}", ex);
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
-        }
-        public ShiftedDataResult ShiftData(ShiftRequest request)
-        {
-            // Step 1: 按 Name 分組數據，並將連續的 Datetime 的數據進行合併
-            var groupedData = request.OriginalData
-                                     .GroupBy(d => d.Name)  // 按 Name 分組
-                                     .ToDictionary(g => g.Key, g =>
-                                         g.GroupBy(item => item.Datetime) // 先按 Datetime 分組
-                                          .Select(group => new ChartDataModel
-                                          {
-                                              Name = group.First().Name,          // 保留 Name
-                                              Datetime = group.Key,               // 保留 Datetime (string)
-                                              Value = group.Sum(item => item.Value) // 同一時間點的 Value 相加
-                                          }).ToList()  // 按原始順序放入列表
-                                     );
-
-            var shiftedData = new List<ChartDataModel>();
-            var shiftedOffsets = new Dictionary<string, int>();  // 儲存每個工具的位移量
-
-            // Step 2: 遍歷每一個工具的數據
-            foreach (var group in groupedData)
-            {
-                string toolName = group.Key;
-                List<ChartDataModel> toolData = group.Value;  // 經過合併後的數據
-
-                // 檢查該工具是否有移動量
-                if (!request.NameShiftMap.ContainsKey(toolName))
-                {
-                    // 沒有移動量，直接添加該工具的數據到最終結果
-                    shiftedData.AddRange(toolData);
-                    shiftedOffsets[toolName] = 0;  // 位移量為 0
-                    continue;
-                }
-
-                // Step 3: 對每個工具的數據進行分鐘位移處理
-                int shiftMinutes = request.NameShiftMap[toolName];
-                shiftedOffsets[toolName] = shiftMinutes;  // 保存位移量
-
-                // 生成一個新列表來儲存移動後的數據
-                var newToolData = new List<ChartDataModel>();
-
-                foreach (var currentItem in toolData)
-                {
-                    // 嘗試將 Datetime 轉換為 DateTime
-                    if (DateTime.TryParse(currentItem.Datetime, out DateTime parsedDatetime))
-                    {
-                        // 移動後的數據設置
-                        var shiftedItem = new ChartDataModel
-                        {
-                            Name = currentItem.Name,
-                            Datetime = parsedDatetime.AddMinutes(shiftMinutes).ToString("yyyy-MM-dd HH:mm:ss"), // 調整後轉回 string
-                            Value = currentItem.Value  // 保留移動前的數據值
-                        };
-                        newToolData.Add(shiftedItem);
+                        var shiftRange = request.ToolShiftRanges[tool];
+                        initialShifts.Add(0); // 假設初始位移為 0
+                        minShifts.Add(shiftRange.Early);
+                        maxShifts.Add(shiftRange.Later);
                     }
                     else
                     {
-                        // 若 Datetime 無法解析，保持原數據不變
-                        newToolData.Add(currentItem);
+                        return BadRequest($"Shift range not found for tool: {tool}");
                     }
                 }
 
-                // 將移動後的數據加入最終結果
-                shiftedData.AddRange(newToolData);
-            }
+                // 提取時間序列數據
+                var timeSeries = request.ToolData
+                    .GroupBy(d => d.Name)
+                    .Select(g => g.OrderBy(d => DateTime.Parse(d.Datetime)).Select(d => d.Value).ToList())
+                    .ToList();
 
-            // 返回移動後的新數據列表和位移範圍
-            return new ShiftedDataResult
-            {
-                ShiftedData = shiftedData,
-                ShiftedOffsets = shiftedOffsets
-            };
-        }
+                // 使用模擬退火進行優化
+                var result = SimulatedAnnealing(timeSeries, initialShifts, minShifts, maxShifts);
 
-
-
-
-
-
-
-        // 退火演算法，返回最終移動的範圍
-        private int SimulatedAnnealingWithShift(List<ChartDataModel> toolData, int windowBefore, int windowAfter)
-        {
-            Random random = new Random();
-            int dataLength = toolData.Count;
-
-            double currentMax = toolData.Max(t => t.Value);
-            double currentTemperature = 1000.0;
-            int finalShift = 0;  // 用來追踪最終的移動範圍
-
-            while (currentTemperature > 0.01)
-            {
-                // 隨機決定位移量
-                int shiftMinutes = random.Next(windowBefore, windowAfter + 1);
-
-                // 複製當前數據並進行移動
-                var newToolData = toolData.Select(d => new ChartDataModel
+                // 根據優化結果生成移位數據
+                var shiftedData = new ShiftedDataResult
                 {
-                    Name = d.Name,
-                    Datetime = d.Datetime,
-                    Value = d.Value
-                }).ToList();
+                    ShiftedData = new List<ChartDataModel>(),
+                    ShiftedOffsets = new Dictionary<string, int>()
+                };
 
-                ShiftToolData(newToolData, shiftMinutes);
-
-                double newMax = newToolData.Max(t => t.Value);
-
-                // 根據退火機制接受或拒絕新的解
-                if (newMax < currentMax || Math.Exp((currentMax - newMax) / currentTemperature) > random.NextDouble())
+                foreach (var group in request.ToolData.GroupBy(d => d.Name))
                 {
-                    toolData = newToolData;
-                    currentMax = newMax;
-                    finalShift = shiftMinutes;  // 更新最終移動範圍
+                    var toolName = group.Key;
+                    int shiftIndex = request.ToolData.Select(td => td.Name).Distinct().ToList().IndexOf(toolName);
+                    int bestShift = result.bestShifts[shiftIndex];
+                    shiftedData.ShiftedOffsets[toolName] = bestShift;
+
+                    // 根據最佳位移結果調整時間序列數據
+                    var shiftedValues = ShiftSeries(timeSeries[shiftIndex], bestShift);
+                    var orderedData = group.OrderBy(d => DateTime.Parse(d.Datetime)).ToList();
+
+                    for (int j = 0; j < shiftedValues.Count; j++)
+                    {
+                        shiftedData.ShiftedData.Add(new ChartDataModel
+                        {
+                            Datetime = orderedData[j].Datetime, // 保持原始時間格式
+                            Name = toolName,
+                            Value = shiftedValues[j],
+                            Diff = orderedData[j].Diff,
+                            color = orderedData[j].color
+                        });
+                    }
                 }
 
-                // 降低溫度
-                currentTemperature *= 0.95;
-            }
+                // 計算優化後的峰值
+                double peakTotal = GetMaxValuePoint(GetSummedSeries(timeSeries)).value;
 
-            return finalShift;  // 返回最終移動的範圍
-        }
-
-        // 將工具數據進行位移
-        private void ShiftToolData(List<ChartDataModel> toolData, int shiftMinutes)
-        {
-            int len = toolData.Count;
-            var shiftedData = new List<ChartDataModel>(toolData);
-
-            for (int i = 0; i < len; i++)
-            {
-                int newIndex = i + shiftMinutes;
-
-                // 確保 newIndex 在合法範圍內，處理負數情況
-                if (newIndex >= 0 && newIndex < len)
+                // 返回優化後的結果數據，包括移位數據和移位結果
+                return Ok(new
                 {
-                    shiftedData[newIndex].Value = toolData[i].Value;
-                }
-                else if (newIndex < 0)
-                {
-                    // 將超出範圍的數據放到列表尾部
-                    shiftedData[len + newIndex].Value = toolData[i].Value;
-                }
+                    ShiftedData = shiftedData.ShiftedData,
+                    ShiftedOffsets = shiftedData.ShiftedOffsets,
+                    PeakTotal = peakTotal
+                });
             }
 
-            // 替換為移動後的數據
-            for (int i = 0; i < len; i++)
+            // 模擬退火算法，和之前的代碼類似
+            private static (List<int> bestShifts, double bestValue) SimulatedAnnealing(List<List<double>> timeSeries, List<int> initialShifts, List<int> minShifts, List<int> maxShifts, int maxIter = 10000, double initialTemp = 100, double coolingRate = 0.99)
             {
-                toolData[i].Value = shiftedData[i].Value;
+                Random random = new Random();
+                List<int> currentShifts = new List<int>(initialShifts);
+                double currentValue = MaxSum(timeSeries, currentShifts);
+                List<int> bestShifts = new List<int>(currentShifts);
+                double bestValue = currentValue;
+                double temperature = initialTemp;
+
+                for (int iteration = 0; iteration < maxIter; iteration++)
+                {
+                    List<int> candidateShifts = new List<int>(currentShifts);
+                    int index = random.Next(candidateShifts.Count);
+                    candidateShifts[index] = random.Next(minShifts[index], maxShifts[index] + 1);
+                    double candidateValue = MaxSum(timeSeries, candidateShifts);
+
+                    if (candidateValue < currentValue || random.NextDouble() < Math.Exp((currentValue - candidateValue) / temperature))
+                    {
+                        currentShifts = new List<int>(candidateShifts);
+                        currentValue = candidateValue;
+                        if (currentValue < bestValue)
+                        {
+                            bestShifts = new List<int>(currentShifts);
+                            bestValue = currentValue;
+                        }
+                    }
+                    temperature *= coolingRate;
+                }
+
+                return (bestShifts, bestValue);
             }
-        }
+
+            private static double MaxSum(List<List<double>> timeSeries, List<int> shifts)
+            {
+                double maxSumValue = double.MinValue;
+                int timePoints = timeSeries[0].Count;
+                List<List<double>> shiftedSeries = new List<List<double>>();
+
+                for (int i = 0; i < timeSeries.Count; i++)
+                {
+                    shiftedSeries.Add(ShiftSeries(timeSeries[i], shifts[i]));
+                }
+
+                for (int t = 0; t < timePoints; t++)
+                {
+                    double currentSum = 0;
+                    for (int i = 0; i < shiftedSeries.Count; i++)
+                    {
+                        currentSum += shiftedSeries[i][t];
+                    }
+                    if (currentSum > maxSumValue)
+                    {
+                        maxSumValue = currentSum;
+                    }
+                }
+                return maxSumValue;
+            }
+
+            private static List<double> ShiftSeries(List<double> series, int shift)
+            {
+                int n = series.Count;
+                List<double> shiftedSeries = new List<double>(new double[n]);
+                for (int i = 0; i < n; i++)
+                {
+                    shiftedSeries[i] = series[(i - shift + n) % n];
+                }
+                return shiftedSeries;
+            }
+
+            private static (int index, double value) GetMaxValuePoint(List<double> series)
+            {
+                int maxIndex = 0;
+                double maxValue = double.MinValue;
+
+                for (int i = 0; i < series.Count; i++)
+                {
+                    if (series[i] > maxValue)
+                    {
+                        maxValue = series[i];
+                        maxIndex = i;
+                    }
+                }
+
+                return (maxIndex, maxValue);
+            }
+
+            private static List<double> GetSummedSeries(List<List<double>> timeSeries)
+            {
+                int timePoints = timeSeries[0].Count;
+                List<double> summedSeries = new List<double>(new double[timePoints]);
+
+                for (int t = 0; t < timePoints; t++)
+                {
+                    double sum = 0;
+                    for (int i = 0; i < timeSeries.Count; i++)
+                    {
+                        sum += timeSeries[i][t];
+                    }
+                    summedSeries[t] = sum;
+                }
+
+                return summedSeries;
+            }
+        
+
+
 
     }
 }
- 
+
+
 
 
 

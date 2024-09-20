@@ -26,7 +26,12 @@ namespace web_MVC.Controllers
         {
             return View();
         }
-    
+
+        public IActionResult EnergyControl()
+        {
+            return View();
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetHistory(string powerTool,string enTool, DateTime date)

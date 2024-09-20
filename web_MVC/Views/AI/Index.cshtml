@@ -1,0 +1,291 @@
+﻿<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" type="text/css">
+</head>
+<div class="title">
+    <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
+    <h2>Interactive Query</h2>
+</div>
+<form id="sqlForm" method="post" asp-action="Index" onsubmit="submitQuestion(event)">
+    <div class="form-group">
+        <label for="question">Enter your question:</label>
+        <input type="text" id="question" name="question" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Generate SQL</button>
+</form>
+
+<div id="result">
+    <h2>Generated SQL:</h2>
+    <pre>@ViewBag.SqlQuery</pre>
+    <h2>Execution Result:</h2>
+    <pre>@ViewBag.Error</pre>
+</div>
+
+@if (ViewBag.Data != null && !string.IsNullOrEmpty(ViewBag.Data.ToString()))
+{
+
+    <div class="form-group">
+        <label for="xAxis">Select X Axis:</label>
+        <select id="xAxis" class="form-control">
+            @foreach (var column in ViewBag.Columns)
+            {
+                <option value="@column">@column</option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="yAxis">Select Y Axis:</label>
+        <select id="yAxis" class="form-control">
+            @foreach (var column in ViewBag.Columns)
+            {
+                <option value="@column">@column</option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="series">Select Series (optional):</label>
+        <select id="series" class="form-control">
+            <option value="">None</option>
+            @foreach (var column in ViewBag.Columns)
+            {
+                <option value="@column">@column</option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="chartType">Select Chart Type:</label>
+        <select id="chartType" class="form-control">
+            <option value="line">Line</option>
+            <option value="bar">Bar</option>
+            <option value="pie">Pie</option>
+        </select>
+    </div>
+
+    <button type="button" onclick="generateChart()" class="btn btn-primary">Generate Chart</button>
+
+
+
+    <div class="d-flex mt-3 mb-3" style="width: 100%;">
+        <!-- 左側：圖表 -->
+        <div class="card flex-grow-1 mr-3" style="max-width: 40%;">
+            <div class="card-header custom-card">
+                Chart
+            </div>
+            <div class="card-body p-0">
+                <canvas id="chartCanvas" width="400" height="400"></canvas>
+            </div>
+        </div>
+
+        <!-- 右側：數據表格 -->
+        <div class="card flex-grow-1" style="max-width: 60%;">
+            <div class="card-header custom-card">
+                Power Event
+            </div>
+            <div class="ascrollable-table-container" style="height: 550px; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            @foreach (var column in ViewBag.Columns)
+                            {
+                                <th>@column</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in ViewBag.Data)
+                        {
+                            <tr>
+                                @foreach (var column in ViewBag.Columns)
+                                {
+                                    <td>@row[column]</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="paginationControls" style="display: none;">
+        <button onclick="changePage(-1)">Previous</button>
+        <button onclick="changePage(1)">Next</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <script>
+        let chartInstance = null;
+        let currentPage = 1;
+        const pageSize = 20000; // 每頁顯示的數據點數量
+        let data = @Html.Raw(Json.Serialize(ViewBag.Data));
+
+        // 根據頁碼和頁面大小返回對應的數據
+        function getPagedData(page, pageSize) {
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            return data.slice(startIndex, endIndex);
+        }
+
+        function generateChart() {
+            const xAxis = document.getElementById('xAxis').value;
+            const yAxis = document.getElementById('yAxis').value;
+            const seriesColumn = document.getElementById('series').value;
+            const chartType = document.getElementById('chartType').value;
+
+
+
+            // 根據條件決定是否顯示分頁控制
+            if (chartType === 'line' && data.length > pageSize) {
+                document.getElementById('paginationControls').style.display = 'block';
+            } else {
+                document.getElementById('paginationControls').style.display = 'none';
+            }
+            const pagedData = chartType === 'line' ? getPagedData(currentPage, pageSize) : data;
+            const labels = [...new Set(pagedData.map(row => row[xAxis]))];
+            const values = pagedData.map(row => row[yAxis]);
+
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+
+            // 如果圖表實例存在，先銷毀它
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // 如果使用者選擇了 series 欄位，則按照 series 分組繪圖
+            let datasets = [];
+
+            if (chartType === 'pie') {
+                const backgroundColors = values.map(() => getRandomColor());
+                datasets = [{
+                    label: yAxis,
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors,
+                    borderWidth: 1
+                }];
+            } else if (seriesColumn) {
+                const groupedData = groupBy(data, seriesColumn);
+
+                for (const seriesName in groupedData) {
+                    const seriesData = groupedData[seriesName];
+                    const randomColor = getRandomColor();
+                    datasets.push({
+                        label: seriesName,
+                        data: seriesData.map(row => row[yAxis]),
+                        backgroundColor: randomColor,
+                        borderColor: randomColor,
+                        borderWidth: 1
+                    });
+                }
+            } else {
+                datasets = [{
+                    label: yAxis,
+                    data: values,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }];
+            }
+
+            const chartData = {
+                labels: labels,
+                datasets: datasets
+            };
+
+            chartInstance = new Chart(ctx, {
+                type: chartType,
+                data: chartData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            autoSkip: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (context.parsed !== null) {
+                                        label += ': ' + context.parsed;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: chartType !== 'pie' ? {
+                        x: {
+                            title: {
+                                display: true,
+                                text: xAxis
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: yAxis
+                            }
+                        }
+                    } : {}
+                }
+            });
+        }
+
+        // 根據指定欄位分組
+        function groupBy(data, key) {
+            return data.reduce(function (result, currentValue) {
+                const groupKey = currentValue[key];
+                if (!result[groupKey]) {
+                    result[groupKey] = [];
+                }
+                result[groupKey].push(currentValue);
+                return result;
+            }, {});
+        }
+        // 分頁控制
+        function changePage(direction) {
+            const totalPages = Math.ceil(data.length / pageSize);
+            currentPage = Math.max(1, Math.min(totalPages, currentPage + direction));
+            generateChart();
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+    </script>
+
+}
+else
+{
+    <p style="margin:15px;">No data found.</p>
+}
+<style>
+    #sqlForm, #result, .form-group {
+        margin: 10px;
+    }
+
+    .ascrollable-table-container {
+        max-height: 550px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+
+    #result {
+        background-color: #ECF5FF;
+    }
+
+</style>

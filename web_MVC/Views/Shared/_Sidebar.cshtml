@@ -12,7 +12,7 @@
 
     <div class="content">
         <div class="btnDiv">
-            <a href="@Url.Action("Index", "ChartView")" aria-current="page">
+            <a href="http://192.168.8.190/Home/powerglow" aria-current="page">
                 Home
             </a>
         </div>
@@ -28,11 +28,20 @@
         </div>
         <div class="collapse" id="collapseExample">
             <div class="btnDiv"><a href="@Url.Action("Index", "History")">Analyze</a></div>
-            <div class="btnDiv"> <a href="@Url.Action("Control","History")">Control</a></div>
+            <div class="btnDiv" id="iconC">
+                <a data-bs-toggle="collapse" href="#collapseExample2" role="button" aria-expanded="false" aria-controls="collapseExample2">
+                    Control
+                </a>
+            </div>
+            <div class="collapse" id="collapseExample2">
+                <div class="btnDiv"> <a href="@Url.Action("Control","History")">Power Control</a></div>
+                <div class="btnDiv"> <a href="@Url.Action("EnergyControl","History")">Energy Control</a></div>
+            </div>
+            
            
         </div>
         <div class="btnDiv">
-            <a href="#">
+            <a href="@Url.Action("Index", "AI")">
                 AI Consult
             </a>
         </div>

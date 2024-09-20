@@ -6,7 +6,7 @@
 </head>
 <div class="title">
     <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
-    <h2>History Control</h2>
+    <h2>Power Control</h2>
 </div>
 <div class="formStyle">
     <div id="DateS">
@@ -25,9 +25,19 @@
         @await Html.PartialAsync("_Loading")
     </div>
 
-    <div id="DPchart"></div>    
-    <div id="form"></div>
+    <div id="DPchart"></div>
+    <div class="card mt-3 mb-3">
+        <div id="form" class="scrollable-table-container"></div>
+    </div>
+   
     <button style="display:none">Analyze</button>
+</div>
+<div id="result" style="display:none">
+    <div id="re_date" class="resultDiv"></div>
+    <div id="re_origin" class="resultDiv"></div>
+    <div id="re_moved" class="resultDiv"></div>
+    <div id="re_percentage" class="resultDiv"></div>
+
 </div>
 <div id="loadDiv2" style="display:none">
     @await Html.PartialAsync("_Loading")
@@ -64,6 +74,7 @@
 
             $('#btn').on('click', function (event) {
                 showDPchart();
+                cleanWindows();
                 $("#dpShow").addClass('blockStyle');
             });
             //
@@ -171,7 +182,7 @@
             function countTotal(data) {
                 // 創建一個物件來存儲相同時間點的總和
                 const totalByDatetime = {};
-
+                var max = 0;
                 // 遍歷數據，按照 datetime 分組並累加 value
                 data.forEach(item => {
                     if (!totalByDatetime[item.datetime]) {
@@ -187,9 +198,16 @@
                         value: totalValue,
                         name: "TOTAL"
                     });
+                    if (totalValue > max) max = totalValue;
                 }
 
                 renderChart(data, 'AllPowerChart_moved');
+                addDataPointAtX(chosenTime, max);
+                $('#re_moved').text("Moved: " + max);
+                var per = (origin_max - max) / origin_max;
+                $('#re_percentage').text("Decrese: " + (per*100) + "%");
+
+
             }
             //
             function fillBestValues(shiftedOffsets) {
@@ -203,7 +221,9 @@
 
             //
             function analyzeDP() {
-
+                $('#loadDiv2').show();
+                $('#AllPowerChart_moved').empty();
+                $('#powerChart_moved').empty();
                 var toolShiftRanges = getRowValues(tools);
                 console.log('range:' + JSON.stringify(toolShiftRanges));
                 fetch('/api/Api/OptimizePowerData', {
@@ -218,6 +238,7 @@
                 })
                     .then(response => response.json())
                     .then(result => {
+                        $('#loadDiv2').hide();
                         console.log('Optimized Data:', result);
                         renderChart(result.shiftedData, 'powerChart_moved');
                         countTotal(result.shiftedData);
@@ -231,6 +252,9 @@
 
 
             //
+            var myDPChart = null;
+            var chosenTime = null;
+            var origin_max = null;
             async function showDPchart() {
                 $('#DPchart').empty();
                 $("#loadDiv").show();
@@ -287,7 +311,7 @@
                 $('#DPchart').empty().append(ctx); // 清除舊的圖表，插入新的
                 $("#loadDiv").hide();
 
-                var myChart = new Chart(ctx, {
+                myDPChart = new Chart(ctx, {
                     type: 'scatter',
                     data: {
                         labels: Labels, // 使用格式化的日期作為 X 軸標籤
@@ -322,28 +346,63 @@
                         },
                         onClick: async (event) => {
                             // 獲取被點擊的元素
-                            const points = myChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                            const points = myDPChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
                             if (points.length) {
                                 // 獲取點擊的數據集索引和數據索引
                                 const firstPoint = points[0];
-                                const time = myChart.data.labels[firstPoint.index];
-                                const value = myChart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
-
+                                const time = myDPChart.data.labels[firstPoint.index];
+                                const value = myDPChart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
+                                cleanWindows();
                                 console.log(`點擊的 X 軸值: ${time}`);
                                 console.log(`對應的 Y 軸值: ${value.y}`);
+                                chosenTime = time;
+                                origin_max = value.y;
                                 showForm(time);
+                                $('loadDiv2').show();
                                 await showAllPowerChart(time);
                                 await showPowerChart(time);
+                                $('#loadDiv2').hide();
+
+                                $('#result').addClass('whiteBlock');
+                                $('#result').show();
+                                $('#re_date').text("Date: "+time);
+                                $('#re_origin').text("Origin: "+origin_max);
                             }
                         }
                     }
                 });
             }
             //
+            function addDataPointAtX(xLabel, newDataPoint) {
+                if (!myDPChart) {
+                    console.error("Chart instance not found.");
+                    return;
+                }
+
+                // 新增新的數據點，並設置點的顏色為綠色
+                myDPChart.data.datasets[0].data.push({ x: xLabel, y: newDataPoint });
+                myDPChart.data.datasets[0].pointBackgroundColor.push('#02C874');
+                myDPChart.data.datasets[0].pointBorderColor.push('#02C874');
+                myDPChart.data.datasets[0].pointRadius.push(8); // 設置點的大小
+
+                // 重新繪製圖表
+                myDPChart.update();
+            }
+            //
+            function cleanWindows() {
+                $('#powerChart').empty();
+                $('#powerChart_moved').empty();
+                $('#AllPowerChart').empty();
+                $('#AllPowerChart_moved').empty();
+                $('#re_date').empty();
+                $('#re_origin').empty();
+                $('#re_moved').empty();
+                $('#re_percentage').empty();
+            }
+            //
             async function showAllPowerChart(date) {
                 $('#AllPowerChart').empty();
-                $('#allpower').addClass('whiteBlock');
-                $("#loadDiv2").show();
+                $('#allpower').addClass('blockStyle');
                 var toolOption = ["TOTAL", "TOOL1", "TOOL2", "TOOL3", "TOOL5", "TOOL6", "TOOL7", "TOOL8", "TOOL9", "TOOL10",
                     "TOOL11", "TOOL12", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
                     "TOOL19", "TOOL20", "AIRCOM"];
@@ -358,11 +417,10 @@
                 }
 
                 renderChart(powerData, 'AllPowerChart');
-                $("#loadDiv2").hide();
             }
             async function showPowerChart(date) {
                 $('#powerChart').empty();
-                $('#powers').addClass('blockStyle');
+                $('#powers').addClass('whiteBlock');
                 var toolOption = ["TOOL1", "TOOL2", "TOOL3", "TOOL5", "TOOL6", "TOOL7", "TOOL8", "TOOL9", "TOOL10",
                     "TOOL11", "TOOL12", "TOOL13", "TOOL14", "TOOL15", "TOOL16", "TOOL17", "TOOL18",
                     "TOOL19", "TOOL20", "AIRCOM"];
@@ -380,7 +438,7 @@
                 renderChart(powerData, 'powerChart');
             }
             //
-            // 固定顏色映射表，將每個工具名稱與固定顏色對應
+            // 固定顏色映射表
             const colorMap = {
                 "TOTAL": "#7AFEC6",
                 "TOOL1": "#FFE153",
