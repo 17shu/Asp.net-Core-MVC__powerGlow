@@ -37,7 +37,7 @@
         </div>
 
         <div>
-            <p class="fontStyle">Date Time :</p>
+            <p>Date Time :</p>
             <input type="date" class="form-control dateStyle" id="date" name="date" />
         </div>
        
@@ -55,13 +55,17 @@
             @await Html.PartialAsync("_Loading")
         </div>
         <div>
+            <div class="chartStyle">
+                <div id="historyPowerChart" style="width:100%"></div>
+            </div>
             
-            <div id="historyPowerChart"></div>
             <div id="historyPowerTable"></div>
         </div>
         <div>
+            <div class="chartStyle">
+                <div id="historyEnergyChart" style="width:100%"></div>
+            </div>
            
-            <div id="historyEnergyChart"></div>
             <div id="historyEnergyTable"></div>
         </div>
         
@@ -449,6 +453,8 @@
             var EnergyHis = document.getElementById('historyEnergyChart');
             var powerTable = document.getElementById('historyPowerTable');
             var energyTable = document.getElementById('historyEnergyTable');
+
+
         </script>
     }
 </body>

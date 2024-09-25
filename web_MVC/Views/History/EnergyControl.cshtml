@@ -7,3 +7,216 @@
     <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
     <h2>Energy Control</h2>
 </div>
+
+<div class="formStyle">
+    <div id="month">
+        <p class="fontStyle">Choose Month :</p>
+        <input type="month" class="form-control dateStyle" name="month" />
+    </div>
+    <button id="go"> Go </button>
+</div>
+<div class="formStyle" id ="result" style="display:none">
+    <div id="re_origin" class="resultDiv"></div>
+    <div id="re_moved" class="resultDiv"></div>
+    <div id="re_percentage" class="resultDiv"></div>
+</div>
+<div class="stayCenter">
+    <div class="card" style="width:80%">
+        <div id="origin_chart"></div>
+    </div>
+
+    <div class="card" style="width:80%">
+        <div id="control_chart"></div>
+    </div>
+</div>
+
+
+
+@section Scripts{
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+        var month = $('#month input').val();
+        
+        $(document).ready(function () {
+            console.log(month);
+        });
+        $('#go').on('click', function (event) {
+            console.log('go search .....');
+            originDataFetch();
+            $('#result').show();
+
+        })
+        function roundToN(num, n) {
+            const factor = Math.pow(10, n); // 計算 10 的 n 次方
+            return Math.round(num * factor) / factor;
+        }
+
+        async function originDataFetch() {
+                var res = await fetch(`/api/Api/GetEnergyControl?`);
+                var data = await res.json();
+                 var originTotal = countTotal(data);
+                $('#re_origin').text('origin total:' + roundToN(originTotal,2));
+                renderChart(data, 'origin_chart');
+                var changedData = controlEnergy(data);
+                var controlTotal = countTotal(changedData);
+                $('#re_moved').text('controled total:' + roundToN(controlTotal,2));
+                renderChart(changedData, 'control_chart');
+            var per = ((originTotal - controlTotal) / originTotal) * 100;
+            $('#re_percentage').text('Saved:' + roundToN(per,2) + "%");
+
+        }
+
+        function countTotal(data) {
+            var total = null;
+            data.forEach(function (item) {
+                total += item.value;
+            });
+            return total;
+        }
+
+        function controlEnergy(data) {
+            // 按照 perValue 進行遞減排序
+            data.sort((a, b) => b.perValue - a.perValue);
+
+            // 抽取排序後的 time 並將其逆序排列
+            const times = data.map(item => item.time).sort((a, b) => a - b);
+
+            // 將最高 perValue 分配最低的 time，依此類推
+            data.forEach((item, index) => {
+                item.time = times[index];
+                // 更新 value 為新的 time * perValue
+                item.value = item.time * item.perValue;
+            });
+
+            return data;
+        }
+
+        async function renderChart(data, id) {
+            var container = document.getElementById(id);
+            container.innerHTML = ''; // 清空已有的 canvas 元素
+
+            console.log("Rendering chart...");
+            var Labels = [];
+            var datasets = [];
+            var minDate = data[0].datetime;
+            var maxDate = data[data.length - 1].datetime;
+
+            // 先根據 Energy 的 perValue 對 data 進行排序（由小到大）
+            data.sort((a, b) => a.perValue - b.perValue);
+
+            data.forEach(function (item) {
+                // 確保每個唯一的 name 只出現一次於 X 軸，並按照排序後的順序加入
+                if (!Labels.includes(item.name)) {
+                    Labels.push(item.name);
+                }
+
+                // 找到或新增 Energy 資料集（藍色）
+                let energyDataset = datasets.find(d => d.label === 'Energy');
+                if (!energyDataset) {
+                    energyDataset = {
+                        label: 'Energy', // 統一顯示為 Energy
+                        data: [],
+                        borderColor: '#97CBFF', // 設定為藍色
+                        backgroundColor: '#97CBFF',
+                        yAxisID: 'y', // 指定使用 y 軸
+                        fill: false,
+                        pointBackgroundColor: [],
+                        pointBorderColor: [],
+                    };
+                    datasets.push(energyDataset);
+                }
+
+                // 找到或新增 RunTime 資料集（綠色）
+                let runTimeDataset = datasets.find(d => d.label === 'RunTime');
+                if (!runTimeDataset) {
+                    runTimeDataset = {
+                        label: 'RunTime', // 統一顯示為 RunTime
+                        data: [],
+                        borderColor: '#95CACA', // 設定為綠色
+                        backgroundColor: '#95CACA',
+                        yAxisID: 'y2', // 指定使用 y2 軸
+                        fill: false,
+                        pointBackgroundColor: [],
+                        pointBorderColor: [],
+                    };
+                    datasets.push(runTimeDataset);
+                }
+
+                // 添加數據到 Energy 和 RunTime 資料集
+                energyDataset.data.push({ x: item.name, y: item.perValue }); // 使用 item.perValue 作為 Energy
+                runTimeDataset.data.push({ x: item.name, y: item.time }); // 假設 item.time 屬於 RunTime
+            });
+
+            var ctx = document.createElement('canvas');
+            container.appendChild(ctx);
+
+            new Chart(ctx, {
+                type: 'bar', // 可以改為其他類型如 'line' 根據需求
+                data: {
+                    labels: Labels,
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#97CBFF', // 設定 Y 軸顏色與資料集顏色相符
+                            },
+                            title: {
+                                display: true,
+                                text: 'Energy',
+                                color: '#97CBFF'
+                            }
+                        },
+                        y2: {
+                            type: 'linear',
+                            position: 'right',
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#95CACA', // 設定 Y2 軸顏色與資料集顏色相符
+                            },
+                            grid: {
+                                drawOnChartArea: false, // 防止與左側 Y 軸網格重疊
+                            },
+                            title: {
+                                display: true,
+                                text: 'RunTime',
+                                color: '#95CACA'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    var label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.raw.y;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+
+
+
+        }
+
+           
+    </script>
+
+}

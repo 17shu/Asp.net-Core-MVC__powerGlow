@@ -1,345 +1,329 @@
-﻿<!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet" type="text/css" href="~/css/site.css" />
-</head>
-<body>
-    <h2>Power Data Chart</h2>
-    <div class="chartDiv">
-        <div>
-            <canvas id="powerDataChart"></canvas>
+﻿
+<div class="title">
+    <i class="bi bi-list sidebarIcon" onclick="sideBarClicked()"></i>
+    <h2>Real-Time Power and Energy Charts</h2>
+</div>
+
+
+<div style="display: flex; flex-direction: column;">
+    <!-- 第一排 -->
+    <div style="display: flex;" class="formStyle">
+        <div class="card mt-3  mr-3 flex: 1;">
+            <div class="card-header custom-card">
+                Power Chart
+            </div>
+            <div class="card-body pr-10">
+                <canvas id="powerChart" width="800" height="500"></canvas>
+            </div>
         </div>
-        <div>
-            <canvas id="powerShowChart"></canvas>
+        <div class="card mt-3  ml-3 flex: 1;">
+            <div class="card-header custom-card">
+                Power Event Bar Chart
+            </div>
+            <div class="card-body pr-10">
+                <canvas id="powerBarChart" width="400" height="500"></canvas>
+            </div>
         </div>
-        
     </div>
-    <div style="display:inline-flex">
-        <h2>Energy Data Chart</h2>
-        <b>count per 15 mins</b>
-    </div>
-    
-    <div class="chartDiv">
-        <div>
-            <canvas id="energyDataChart"></canvas>
+    <!-- 第二排 -->
+    <div style="display: flex; margin-top: 20px;" class="formStyle">
+        <div class="card mt-3  mr-3 flex: 1;">
+            <div class="card-header custom-card">
+                Energy Chart
+            </div>
+            <div class="card-body pr-10">
+                <canvas id="energyChart" width="800" height="500"></canvas>
+            </div>
         </div>
-        <div>
-            <canvas id="energyShowChart"></canvas>
+        <div class="card mt-3  ml-3 flex: 1;">
+            <div class="card-header custom-card">
+                Energy Event Bar Chart
+            </div>
+            <div class="card-body pr-10">
+                <canvas id="energyBarChart" width="400" height="500"></canvas>
+            </div>
         </div>
-        
     </div>
+</div>
 
-    @section Scripts {
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+@section scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script>
+        let currentMinute = 420;
+        let energyCurrentMinute = 420;
+        let isFetchingPower = false;
+        let isFetchingEnergy = false;
 
-        <script>
-            $(document).ready(function () {
-                const powerChartContext = document.getElementById('powerDataChart').getContext('2d');
-                const energyChartContext = document.getElementById('energyDataChart').getContext('2d');
-                const powerShowContext = document.getElementById('powerShowChart').getContext('2d');
-                const energyShowContext = document.getElementById('energyShowChart').getContext('2d');
-                const powerDataChartCanvas = document.getElementById('powerDataChart');
-                const powerShowChartCanvas = document.getElementById('powerShowChart');
-                const energyDataChartCanvas = document.getElementById('energyDataChart');
-                const energyShowChartCanvas = document.getElementById('energyShowChart');
-
-                powerDataChartCanvas.height = 550;
-                powerDataChartCanvas.width = 1000;
-                powerShowChartCanvas.height = 500;
-                powerShowChartCanvas.width = 600;
-                energyDataChartCanvas.height = 500;
-                energyDataChartCanvas.width = 1000;
-                energyShowChartCanvas.height = 500;
-                energyShowChartCanvas.width = 600;
-
-
-                let powerChart = new Chart(powerChartContext, {
-                    type: 'line',
-                    data: {
-                        labels: [],
-                        datasets: []
-                    },
-                    options: {
-                        scales: {
-                            x: {
-                                type: 'linear',
-                                title: {
-                                    display: true,
-                                    text: 'Minutes'
-                                }
-                            },
-                            y: {
-                                beginAtZero: true
-                            }
+        // Power chart setup
+        var powerChartCanvas = document.getElementById('powerChart').getContext('2d');
+        var powerChart = new Chart(powerChartCanvas, {
+            type: 'line',
+            data: {
+                datasets: []
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Minutes'
                         }
-                    }
-                });
-
-                let energyChart = new Chart(energyChartContext, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: []
                     },
-                    options: {
-                        scales: {
-                            x: {
-                                stacked: true,
-                                title: {
-                                    display: true,
-                                },
-                                grid: {
-                                    display: true,
-                                    drawBorder: false,
-                                    color: function (context) {
-                                        return context.tick && context.tick.label ? '#e0e0e0' : 'transparent';
-                                    }
-                                }
-                            },
-                            y: {
-                                beginAtZero: false,
-                                stacked: true,
-                                grid: {
-                                    display: true
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false,
-                            }
-                        },
+                    y: {
+                        beginAtZero: true
                     }
-                });
+                }
+            }
+        });
 
-               
-                
-                var powerShow = new Chart(powerShowContext, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Power Data',
-                            data: [],
-                            backgroundColor: '#145A32'
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y', // 設置為水平條形圖
-                        responsive: true,
-                        scales: {
-                            x: {
-                                beginAtZero: true
-                            },
-                            y: {
-                                beginAtZero: true
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
+        // Energy chart setup
+        var ctx = document.getElementById('energyChart').getContext('2d');
+        var energyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: []
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Minutes'
                         }
-                    }
-                });
-
-
-                var energyShow = new Chart(energyShowContext, {
-                    type: 'bar', // 使用柱狀圖類型
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Energy Data',
-                            data: [],
-                        }]
                     },
-                    options: {
-                        indexAxis: 'y', // 設置為水平條形圖
-                        responsive: true,
-                        scales: {
-                            x: {
-                                beginAtZero: true
-                            },
-                            y: {
-                                beginAtZero: true
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        }
+                    y: {
+                        beginAtZero: true
                     }
-                });
+                }
+            }
+        });
 
-                const powerDataStore = {};
-                const energyDataStore = {};
-                let powerShowStore = {}; // 現在只初始化一次
-                const energyShowStore = {};
-                let currentMin = 419;
+        // Power Bar chart setup
+        var powerBarChartCanvas = document.getElementById('powerBarChart').getContext('2d');
+        var powerBarChart = new Chart(powerBarChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Power Data',
+                    data: [],
+                    backgroundColor: 'rgba(0, 102, 51, 0.6)'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
 
-                function updateChart(chart, dataStore, data) {
-                    const labels = new Set(chart.data.labels);
-                    const newPowerShowStore = {}; // 每次更新重置
+        // Energy Bar chart setup
+        var energyBarChartCanvas = document.getElementById('energyBarChart').getContext('2d');
+        var energyBarChart = new Chart(energyBarChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Energy Data',
+                    data: [],
+                    backgroundColor: '#1B4F72'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
 
-                    data.forEach(item => {
-                        const baseName = item.name.split('_')[0];
-                        const date = new Date(item.datetime);
-                        const minutes = date.getHours() * 60 + date.getMinutes();
 
-                        labels.add(minutes);
 
-                        if (!dataStore[baseName]) {
-                            dataStore[baseName] = {
-                                label: baseName,
+        //  chart update function
+        async function updateCharts() {
+            if (isFetchingPower || isFetchingEnergy) return;
+
+            // 设置标识符以防止重复请求
+            isFetchingPower = true;
+            isFetchingEnergy = true;
+
+            try {
+                // 获取 power 数据
+                let powerResponse = await fetch(`http://192.168.8.190/api/Products/fetchpowerdata?currentMinute=${currentMinute}`);
+                    let powerData = await powerResponse.json();
+                // console.log('PowerData received:', powerData);
+
+                // 更新 powerChart
+                if (powerData.length > 0) {
+                    powerData.forEach(item => {
+                        let dataset = powerChart.data.datasets.find(ds => ds.label === item.name);
+
+                        if (!dataset) {
+                            dataset = {
+                                label: item.name,
                                 data: [],
                                 borderColor: getRandomColor(),
-                                borderWidth: 1,
-                                fill: false
+                                fill: false,
+                                pointBackgroundColor: [],
+                                pointRadius: []
                             };
-                            chart.data.datasets.push(dataStore[baseName]);
+                            powerChart.data.datasets.push(dataset);
                         }
 
-                        if (!newPowerShowStore[baseName]) {
-                            newPowerShowStore[baseName] = {
-                                label: baseName,
-                                data: [],
-                                backgroundColor: '#0066CC'
-                            };
-                        }
+                        // 確保資料點存在於 dataset
+                        const exists = dataset.data.some(point => point.x === currentMinute);
 
-                        dataStore[baseName].data.push({
-                            x: minutes,
-                            y: item.value
-                        });
-
-                        newPowerShowStore[baseName].data.push({
-                            x: item.value,
-                            y: baseName
-                        });
-                    });
-
-                    chart.data.labels = Array.from(labels).sort((a, b) => a - b);
-                    chart.update();
-
-                    // 更新 powerShow 的數據
-                    powerShow.data.datasets = Object.values(newPowerShowStore).map(dataset => ({
-                        label: dataset.label,
-                        data: dataset.data.sort((a, b) => b.x - a.x),
-                        backgroundColor: dataset.backgroundColor
-                    }));
-
-                    powerShow.data.datasets.sort((a, b) => {
-                        if (a.data.length === 0 || b.data.length === 0) return 0;
-                        return b.data[0].x - a.data[0].x;
-                    });
-                    powerShow.update();
-
-                    // 更新全局 powerShowStore 以備下次更新
-                    powerShowStore = newPowerShowStore;
-                }
-
-                function updateEnergyChart(chart, dataStore, data) {
-                    const interval = 15;
-                    const intervalColors = {};
-                    const passMin = currentMin - 420;
-
-                    data.forEach(item => {
-                        const baseName = item.name.split('_')[0];
-                        const date = new Date(item.datetime);
-                        const intervalKey = Math.floor(passMin / interval) * interval;
-
-                        if (!dataStore[baseName]) {
-                            dataStore[baseName] = {
-                                label: baseName,
-                                data: [],
-                                backgroundColor: [],
-                            };
-                            chart.data.datasets.push(dataStore[baseName]);
-                        }
-
-                        if (!intervalColors[intervalKey]) {
-                            intervalColors[intervalKey] = getRandomColor();
-                        }
-
-                        if (!dataStore[baseName].totalCount) {
-                            dataStore[baseName].intervals = {};
-                            dataStore[baseName].totalCount = 0;
-                        }
-
-                        if (!dataStore[baseName].intervals[intervalKey]) {
-                            dataStore[baseName].intervals[intervalKey] = 0;
-                        }
-
-                        if (!energyShowStore[baseName]) {
-                            energyShowStore[baseName] = {
-                                label: baseName,
-                                data: [],
-                                backgroundColor: '#0066CC'
-                            };
-                            energyShow.data.datasets.push(energyShowStore[baseName]);
-                        }
-
-                        if (passMin % interval === 0 && passMin != 0) {
-                            dataStore[baseName].totalCount += item.value;
-
-                            dataStore[baseName].data.push({
-                                x: baseName,
-                                y: dataStore[baseName].totalCount,
+                        if (!exists) {
+                            dataset.data.push({
+                                x: currentMinute,
+                                y: item.value
                             });
-                            dataStore[baseName].backgroundColor.push(intervalColors[intervalKey]);
+                        }
 
-                            energyShowStore[baseName].data = [];
-                            energyShowStore[baseName].data.push({
-                                x: item.value,
-                                y: baseName
-                            });
+                        // 標註 power event
+                        if (item.powerEventStatus === 'powerevent') {
+                            dataset.pointBackgroundColor.push('rgba(0,102,51,1)');
+                            dataset.pointRadius.push(5);
+                            let powerBarData = [];
 
-                            if (intervalKey != 0) {
-                                chart.data.datasets.forEach(dataset => {
-                                    dataset.data.sort((a, b) => b.y - a.y);
+                            powerData.forEach(item => {
+                                powerBarData.push({
+                                    name: item.name,
+                                    value: item.value
                                 });
-                            }
+                            });
+
+                            powerBarData.sort((a, b) => b.value - a.value);
+
+                            powerBarChart.data.labels = powerBarData.map(item => item.name);
+                            powerBarChart.data.datasets[0].data = powerBarData.map(item => item.value);
+
+                        } else {
+                            dataset.pointBackgroundColor.push('rgba(0, 0, 0, 0.2)');
+                            dataset.pointRadius.push(3);
                         }
                     });
 
-                    chart.update();
-                    energyShow.update();
+                    powerChart.update();
+                    powerBarChart.update();
+
+
                 }
 
-                function getRandomColor() {
-                    const letters = '0123456789ABCDEF';
-                    let color = '#';
-                    for (let i = 0; i < 6; i++) {
-                        color += letters[Math.floor(Math.random() * 16)];
-                    }
-                    return color;
+                // 获取 energy 数据
+                let energyResponse = await fetch(`http://192.168.8.190/api/Products/fetchenergydata?currentMinute=${currentMinute}`);
+                    let energyData = await energyResponse.json();
+                console.log('EnergyData received:', energyData);
+
+                // 更新 energyChart
+                if (energyData.length > 0) {
+                    energyData.forEach(item => {
+                        let dataset = energyChart.data.datasets.find(ds => ds.label === item.name);
+
+                        if (!dataset) {
+                            dataset = {
+                                label: item.name,
+                                data: [],
+                                borderColor: getRandomColor(),
+                                fill: false,
+                                pointBackgroundColor: [],
+                                pointRadius: []
+                            };
+                            energyChart.data.datasets.push(dataset);
+                        }
+
+                        const exists = dataset.data.some(point => point.x === currentMinute);
+
+                        if (!exists) {
+                            dataset.data.push({
+                                x: currentMinute,
+                                y: item.value
+                            });
+                        }
+                        // 標註 energy event
+                        if (item.energyEventStatus === 'energyevent') {
+                            dataset.pointBackgroundColor.push('#1B4F72');
+                            dataset.pointRadius.push(5);
+                            // 更新 energyBarChart
+                            let energyBarData = [];
+                            energyData.forEach(item => {
+                                energyBarData.push({
+                                    name: item.name,
+                                    value: item.value
+                                });
+                            });
+
+                            energyBarData.sort((a, b) => b.value - a.value);
+
+                            energyBarChart.data.labels = energyBarData.map(item => item.name);
+                            energyBarChart.data.datasets[0].data = energyBarData.map(item => item.value);
+
+                        } else {
+                            dataset.pointBackgroundColor.push('rgba(0, 0, 0, 0.2)');
+                            dataset.pointRadius.push(3);
+                        }
+                    });
+
+                    energyChart.update();
+                    energyBarChart.update();
                 }
 
-                async function fetchPowerData() {
-                    const response = await fetch(`/api/Api/GetPowerData?minuteOfDay=${currentMin}`);
-                    const data = await response.json();
-                    updateChart(powerChart, powerDataStore, data);
-                }
+            } catch (error) {
+                console.error('Error fetching or updating charts:', error);
+            } finally {
+                // 重置标识符
+                isFetchingPower = false;
+                isFetchingEnergy = false;
+            }
 
-                async function fetchEnergyData() {
-                    const response = await fetch(`/api/Api/GetEnergyData?minuteOfDay=${currentMin}`);
-                    const data = await response.json();
-                    updateEnergyChart(energyChart, energyDataStore, data);
-                }
+            // 增加当前分钟数
+            currentMinute += 1;
+        }
 
-                function refreshData() {
-                    currentMin += 1;
-                    fetchPowerData();
-                    fetchEnergyData();
-                }
 
-                setInterval(refreshData, 1500);
-                refreshData();
-            });
-        </script>
-    }
-</body>
-</html>
+        // 每秒调用 updateCharts 函数更新图表
+        setInterval(updateCharts, 1000);
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+
+            // 將十六進位色碼轉換為 rgba 格式，並設置透明度為 0.6
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+
+            return `rgba(${ r }, ${ g }, ${ b }, 0.6)`;
+        }
+
+    </script>
+}

@@ -12,4 +12,14 @@ namespace web_MVC.Models
 
         public string color { get; set; }
     }
+
+    public class ChartEnergyControl
+    {
+        public string Name { get; set; }
+        public double Value { get; set; }
+        public double  perValue{ get; set; }
+
+        public double Time { get; set; }
+
+    }
 }

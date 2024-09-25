@@ -16,8 +16,11 @@
 </form>
 
 <div id="result">
-    <h2>Generated SQL:</h2>
-    <pre>@ViewBag.SqlQuery</pre>
+    <div style="background-color: #ECF5FF;">
+        <h2>Generated SQL:</h2>
+        <pre>@ViewBag.SqlQuery</pre>
+    </div>
+   
     <h2>Execution Result:</h2>
     <pre>@ViewBag.Error</pre>
 </div>
@@ -284,8 +287,6 @@ else
         border-radius: 5px;
     }
 
-    #result {
-        background-color: #ECF5FF;
-    }
+
 
 </style>

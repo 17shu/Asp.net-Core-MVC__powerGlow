@@ -1,4 +1,9 @@
-﻿<div class="modal fade" id="windowsContainer" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+﻿
+@{
+    ViewData["ShowSidebar"] = true;
+}
+
+<div class="modal fade" id="windowsContainer" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -11,7 +16,6 @@
                 <div id="pieChart"></div>
             </div>
             <div class="modal-footer">
-                @* <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> *@
             </div>
         </div>
     </div>

@@ -1084,7 +1084,46 @@ namespace web_MVC.Controllers
 
                 return summedSeries;
             }
-        
+
+        [HttpGet("GetEnergyControl")]
+        public IActionResult GetEnergyControl()
+        {
+            var connectionString = _configuration.GetConnectionString("MySqlConnection");
+            var data = new List<ChartEnergyControl>();
+
+            try
+            {
+                using (var con = new MySqlConnection(connectionString))
+                {
+                    con.Open();
+                    var query = new MySqlCommand(@"SELECT * FROM di_schemas.monthly_energy WHERE name != 'AIRCOM'", con);
+
+                    using (var reader = query.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            data.Add(new ChartEnergyControl
+                            {
+                                Name = reader["name"].ToString(),
+                                Value = Convert.ToDouble(reader["value"]),
+                                perValue = Convert.ToDouble(reader["per_value"]),
+                                Time = Convert.ToDouble(reader["run_time"])
+                            });
+                        }
+                    }
+                }
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                // 記錄錯誤訊息
+                _logger.LogError($"An error occurred while executing the database query: {ex.Message}", ex);
+                // 返回錯誤狀態碼及訊息
+                return StatusCode(500, "An error occurred while fetching the data.");
+            }
+        }
+
+
 
 
 

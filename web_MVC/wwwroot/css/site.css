@@ -31,25 +31,32 @@ div {
 
 }
 .title {
-    display: inline-flex;
+    display: flex; /* 使用 flex 布局 */
     background-color: #304669;
     color: #EBF4FA;
     height: 100px;
-    margin: 0px;
-    position: relative;
-    width: 100vw;
+    margin: 0;
+    position: relative; /* 不使用 fixed，讓標題可以滾動 */
+    width: 100%; /* 設置寬度，根據 sidebar 來減去 250px */
     padding-left: 25px;
     align-items: center;
     justify-content: center;
     font-family: monospace;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* 增加陰影效果以增強視覺層次 */
+    transition: width 0.3s ease; /* 增加寬度變化的平滑效果 */
 }
+
+.sidebar.hidden ~ .title {
+    width: 100%; /* 當 sidebar 隱藏時，標題寬度變為 100% */
+}
+
 
 .formStyle {
     margin-top: 60px; 
     margin-left:60px;
     margin-bottom:50px;
     display: flex;
-    justify-content:left;
+    justify-content:center;
     font-size:20px;
     gap:60px;
     overflow:auto;
@@ -58,7 +65,10 @@ div {
     max-height: 300px;
     overflow-y: scroll;
 }
-
+.stayCenter{
+    display:grid;
+    justify-items:center;
+}
 .card {
     display: inline-flex;
     justify-content: center;
@@ -107,9 +117,10 @@ table {
 }
 .chartStyle{
     margin-top:50px;
-    display:flex;
+    display:inline-flex;
     justify-content:center;
-    height:450px;
+    justify-self:center;
+    height:auto;
     width:80%;
 }
 
@@ -220,7 +231,7 @@ body {
 }
 
 .resultDiv {
-    width: 300px;
+    width: fit-content;
     height: 60px;
     font-size: 24px;
     border: solid 3px #66B3FF;
@@ -230,4 +241,5 @@ body {
     align-items: center;
     box-shadow: 4px 4px 5px 0px #003060;
 }
+
 }
